@@ -25,7 +25,7 @@ class Establishment(Resource):
             query.append({argument:request.args.get(argument)})
             subquery = ("%s LIKE '%s' AND " % (argument,request.args.get(argument)))
             where.append(subquery)
-        input_dict = json.load(open('Data/establishments.json'))
+        input_dict = json.load(open('data/establishments.json'))
         sql_where = ''.join(where).rstrip(" AND ")
         if query:
             if "name" in ''.join(map(str,query)) and "oib" not in ''.join(map(str,query)):
@@ -37,4 +37,4 @@ class Establishment(Resource):
         else:
             output_dict = input_dict
         return Response(json.dumps(output_dict), mimetype='application/json')
-        #return Response(open('Data/establishments.json'), mimetype='application/json')
+        #return Response(open('data/establishments.json'), mimetype='application/json')
