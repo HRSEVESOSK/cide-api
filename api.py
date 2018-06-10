@@ -7,6 +7,7 @@ from modules import inspection
 app = Flask(__name__)
 api = Api(app)
 
+
 api.add_resource(auth.Authentication, '/login', '/logout')
 api.add_resource(establishment.Establishment, '/establishment')
 api.add_resource(inspection.Inspection,'/inspection/<estab_id>')

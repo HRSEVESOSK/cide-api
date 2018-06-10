@@ -1,0 +1,44 @@
+[
+    {
+      "oid":1,
+      "date":"2018-01-01",
+      "coordinator":"Coordinator A",
+      "total_score":10,
+      "establishment_ref": 1
+    },
+    {
+      "oid":2,
+      "date":"2018-02-01",
+      "coordinator":"Coordinator B",
+      "total_score":9.81,
+      "establishment_ref": 1
+    },
+    {
+      "oid":3,
+      "date":"2018-03-01",
+      "coordinator":"Coordinator C",
+      "total_score":9.21,
+      "establishment_ref": 1
+    },
+  {
+      "oid":1,
+      "date":"2016-01-01",
+      "coordinator":"Coordinator D",
+      "total_score":8.88,
+      "establishment_ref": 2
+    },
+    {
+      "oid":2,
+      "date":"2016-02-01",
+      "coordinator":"Coordinator E",
+      "total_score":9.81,
+      "establishment_ref": 2
+    },
+    {
+      "oid":3,
+      "date":"2017-03-01",
+      "coordinator":"Coordinator ZX",
+      "total_score":9.21,
+      "establishment_ref": 3
+    }
+]
