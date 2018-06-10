@@ -18,7 +18,11 @@ class Inspection(Resource):
         return True
 
     def get(self,estab_id=False):
+        input_dict = json.load(open('data/coordinated_inspections.json'))
         if estab_id:
-            input_dict = json.load(open('data/coordinated_inspections.json'))
             output_dict = [x for x in input_dict if x['establishment_ref'] == int(estab_id)]
-            return Response(json.dumps(output_dict), mimetype='application/json')
+        else:
+            output_dict = input_dict
+        return Response(json.dumps(output_dict), mimetype='application/json')
+
+
