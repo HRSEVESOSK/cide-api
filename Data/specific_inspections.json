@@ -1,0 +1,29 @@
+[
+    {
+      "oid":1,
+      "type_ref": 1,
+      "date":"2018-01-01",
+      "inspector_ref":1,
+      "report_path":"establishments/reports/report.pdf",
+      "score_ref": 1,
+      "issues_ref": 1
+    },
+    {
+      "oid":2,
+      "type_ref": 2,
+      "date":"2018-01-01",
+      "inspector_ref":1,
+      "report_path":"establishments/reports/report.pdf",
+      "score_ref": 1,
+      "issues_ref": 1
+    },
+    {
+      "oid":1,
+      "type_ref": 1,
+      "date":"2018-01-01",
+      "inspector_ref":"Coordinator A",
+      "report_path":"establishments/reports/report.pdf",
+      "score_ref": 1,
+      "issues_ref": 1
+    }
+]
