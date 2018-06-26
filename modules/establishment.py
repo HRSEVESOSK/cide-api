@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
+import sys
 import json
+from urllib import unquote
 from flask_restful import Resource
 from flask import request, Response,g,jsonify
 from flask_httpauth import HTTPBasicAuth
 from modules import auth as authentication
+import lib.pgsql as pgsql
 auth = HTTPBasicAuth()
 class Establishment(Resource):
     @auth.verify_password
@@ -14,14 +18,51 @@ class Establishment(Resource):
         print(user)
         if not user:
             return False
-        #g.user = user
+        g.user = user
         return True
 
-    @auth.login_required
+    #@auth.login_required
     def get(self):
-        query = []
-        where = []
-        for argument in request.args:
+        connection = pgsql.PGSql()
+
+        if request.args:
+            for argument in request.args:
+                if argument == 'name':
+                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR from cide_establishment where establishment_name like '%s'" % ((request.args.get(argument)).encode("utf-8")).replace('*','%'))
+                    print(sqlSelect)
+                    connection.connect()
+                    data = connection.query(sqlSelect)
+                    #data = connection.query(sql=sqlSelect)
+                    connection.close()
+                    continue
+                elif argument == 'oib':
+                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR from cide_establishment where oib = '%s'" % (request.args.get(argument)).encode("utf-8"))
+                    connection.connect()
+                    data = connection.query(sql=sqlSelect)
+                    connection.close()
+                    continue
+                else:
+                    return Response('{"message":"parameter %s not available"}' % str(argument),mimetype='application/json')
+        else:
+            sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR from cide_establishment")
+            connection.connect()
+            data = connection.query(sqlSelect)
+            connection.close()
+        if data:
+            returnDataList = []
+            returnDataList.append({"count": connection.numresult})
+            for row in data:
+                returnData = {}
+                returnData['oib'] = (row['oib'])
+                returnData['establishment_name'] = (row['mun_name'])
+                returnData['establishment_municipality'] = (row['munic'])
+                returnData['establishment_address'] = (row['addr'])
+                returnDataList.append(returnData)
+            return Response(json.dumps(returnDataList), mimetype='application/json')
+
+        '''    
+            sendQuery = SQL.selectQuery(table='cide_establishment',where=)
+            print(argument)
             query.append({argument:request.args.get(argument)})
             subquery = ("%s LIKE '%s' AND " % (argument,request.args.get(argument)))
             where.append(subquery)
@@ -38,3 +79,4 @@ class Establishment(Resource):
             output_dict = input_dict
         return Response(json.dumps(output_dict), mimetype='application/json')
         #return Response(open('data/establishments.json'), mimetype='application/json')
+        '''

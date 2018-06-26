@@ -14,7 +14,7 @@ class Inspection(Resource):
         print(user)
         if not user:
             return False
-        # g.user = user
+        g.user = user
         return True
 
     def get(self,estab_id=False):
