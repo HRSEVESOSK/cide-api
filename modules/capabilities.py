@@ -23,4 +23,4 @@ class Capabilities(Resource):
     @auth.login_required
     def get(self):
         output_dict = json.load(open('data/swagger.json'))
-        return Response(json.dumps(output_dict), mimetype='application/json')
+        return Response(json.dumps(output_dict,ensure_ascii=False), mimetype='application/json')

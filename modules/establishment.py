@@ -63,7 +63,7 @@ class Establishment(Resource):
                 returnData['establishment_address'] = (row['addr'])
                 returnDataList.append(returnData)
             print returnDataList
-            return Response(json.dumps(returnDataList), mimetype='application/json')
+            return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
 
         '''    
             sendQuery = SQL.selectQuery(table='cide_establishment',where=)

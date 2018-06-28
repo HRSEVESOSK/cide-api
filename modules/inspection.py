@@ -43,7 +43,7 @@ class Inspection(Resource):
                 returnData['name'] = (row['instype']).split('/')[1]
                 returnDataList.append(returnData)
             self.connection.close()
-            return Response(json.dumps(returnDataList), mimetype='application/json')
+            return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
         if oib and request.query_string != '':
             where = []
             for k,v in enumerate(request.args):
@@ -71,7 +71,7 @@ class Inspection(Resource):
                 returnData['inspection_coordinator'] = (row['coordinator'])
                 returnDataList.append(returnData)
             self.connection.close()
-            return Response(json.dumps(returnDataList), mimetype='application/json')
+            return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
 
     @auth.login_required
     def post(self):
