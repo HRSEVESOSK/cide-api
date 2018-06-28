@@ -1,4 +1,5 @@
-# -*- coding: UTF8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import json
 from urllib import unquote
 from flask_restful import Resource
