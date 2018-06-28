@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import psycopg2, logging
 import psycopg2.extras
 
@@ -27,10 +28,10 @@ class PGSql:
         self.conn.close()
 
     def query(self, sql, fetch=True):
-        print("Function query was called")
-        logging.info("Function query was called")
-        #print("Function query was called for '%s'" % sql[0:250])
-        logging.info("Function query was called for '%s'" % sql[0:100])
+        #print("Function query was called")
+        #logging.info("Function query was called")
+        print("Function query was called for '%s'" % sql[0:250])
+        #logging.info("Function query was called for '%s'" % sql[0:100])
         """ Execute query """
         try:
             cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -52,6 +53,7 @@ class PGSql:
             print("NUMBER OF RESULTS")
             print self.numresult
             result = cur.fetchall()
+            print result
             return result
         else:
             self.conn.commit()

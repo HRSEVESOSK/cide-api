@@ -10,10 +10,10 @@ from config import config as cfg
 app = Flask(__name__)
 api = Api(app)
 
-api.add_resource(capabilities.Capabilities, '/')
+api.add_resource(capabilities.Capabilities, '/api')
 api.add_resource(auth.Authentication, '/login', '/logout')
-api.add_resource(establishment.Establishment, '/establishment')
-api.add_resource(inspection.Inspection,'/inspection/<estab_id>','/inspection')
+api.add_resource(establishment.Establishment, '/api/establishment')
+api.add_resource(inspection.Inspection,'/api/inspection/','/api/inspection/<oib>','/api/inspection/insert','/api/inspection/update','/api/inspection/types')
 
 
 if __name__ == '__main__':

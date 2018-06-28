@@ -2,6 +2,8 @@ from flask_restful import Resource
 from flask import request,g,make_response
 from flask_httpauth import HTTPBasicAuth
 import requests,json,urllib
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 auth = HTTPBasicAuth()
 
