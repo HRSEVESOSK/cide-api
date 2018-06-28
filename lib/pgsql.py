@@ -53,7 +53,6 @@ class PGSql:
             print("NUMBER OF RESULTS")
             print self.numresult
             result = cur.fetchall()
-            print result
             return result
         else:
             self.conn.commit()

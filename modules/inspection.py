@@ -1,12 +1,14 @@
-import json,datetime
+# -*- coding: utf-8 -*-
+import json,datetime,sys
 from flask_restful import Resource
-import urllib
+from hashids import Hashids
 from flask import request, Response,g,jsonify
 from flask_httpauth import HTTPBasicAuth
 from modules import auth as authentication
 from modules import person as Person
 import lib.pgsql as pgsql
 auth = HTTPBasicAuth()
+hashids = Hashids(min_length=16)
 class Inspection(Resource):
     def __init__(self):
         self.connection =  pgsql.PGSql()
@@ -28,40 +30,42 @@ class Inspection(Resource):
         return True
 
     @auth.login_required
-    def get(self,oib=False):
-        if not oib and not request.path.endswith("/types"):
+    def get(self,hashid=False):
+        if not hashid and not request.path.endswith("/types"):
             return Response('{"message":"missing oib filter"}', mimetype='application/json')
-        if not oib and request.path.endswith("/types"):
+        if not hashid and request.path.endswith("/types"):
             ## GET LIST OF SPEC INSP TYPES
             self.connection.connect()
-            specinstypes = self.connection.query("SELECT des_inspection_type INSTYPE from cide_specific_inspection_type")
+            specinstypes = self.connection.query("SELECT des_inspection_type INSTYPE,id_inspection_type ID from cide_specific_inspection_type")
             print specinstypes
             returnDataList=[]
             for row in specinstypes:
                 returnData = {}
                 returnData['code'] = (row['instype']).split('/')[0]
+                ##APPEN INSPECTORS TO INSPECTION TYPES
+                personids = self.connection.query("SELECT id_person IDP, id_person_role IDPR  FROM cide_person_role WHERE id_inspection_type = %s" % row['id'])
+                print personids
+                if personids:
+                    inspectors = []
+                    for person in personids:
+                        inspector = {}
+                        inspector['fullname'] = (self.connection.query("SELECT concat(person_name,' ',person_surname) FULLNAME FROM cide_person WHERE id_person = %s" % person[0]))[0][0]
+                        inspector['id'] = hashids.encode(person[1])
+                        inspectors.append(inspector)
+                    returnData['inspectors'] = inspectors
                 returnData['name'] = (row['instype']).split('/')[1]
                 returnDataList.append(returnData)
             self.connection.close()
             return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
-        if oib and request.query_string != '':
-            where = []
-            for k,v in enumerate(request.args):
-                print urllib.unquote(request.query_string).encode('utf8')
-                subquery = ("%s LIKE '%s' AND " % (v, (request.args.get(v)).decode('utf-8')))
-                where.append(subquery)
-            print where
-            exit()
-        ##GET establishment id from oib
         self.connection.connect()
-        estabid = self.connection.query("SELECT id from cide_establishment WHERE oib = '%s'" % oib)
+        #estabid = self.connection.query("SELECT id from cide_establishment WHERE oib = '%s'" % oib)
         self.connection.close()
         ##GET coordinated inspections for estabid
         self.connection.connect()
-        coordinspedata = self.connection.query("SELECT a.inspection_date DATE, concat(b.person_name,' ',b.person_surname) COORDINATOR from cide_coordinated_inspection a, cide_person b WHERE a.id_establishment = %s AND a.id_user = b.id_person" % estabid[0][0])
+        coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID,a.inspection_date DATE, concat(b.person_name,' ',b.person_surname) COORDINATOR from cide_coordinated_inspection a, cide_person b WHERE a.id_establishment = %s AND a.id_user = b.id_person" %  (hashids.decode(hashid))[0])
         if not coordinspedata:
             self.connection.close()
-            return Response('{"message":"establishment %s has 0 coordinated inspections"}' % oib, mimetype='application/json')
+            return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid, mimetype='application/json')
         else:
             returnDataList = []
             returnDataList.append({"count": self.connection.numresult})
@@ -69,6 +73,7 @@ class Inspection(Resource):
                 returnData = {}
                 returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
                 returnData['inspection_coordinator'] = (row['coordinator'])
+                returnData['id'] = (hashids.encode(row['id']))
                 returnDataList.append(returnData)
             self.connection.close()
             return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
@@ -77,32 +82,31 @@ class Inspection(Resource):
     def post(self):
         loggeduser = g.user
         requestData = request.get_json()
-        oib = requestData['oib']
+        idestablishment = requestData['id']
         inspection_date = requestData['inspection_date']
         lastupdate = datetime.datetime.now().strftime('%Y-%m-%d')
         self.connection.connect()
-        estabid = self.connection.query("SELECT id from cide_establishment WHERE oib = '%s'" % oib)
+        #estabid = self.connection.query("SELECT id from cide_establishment WHERE oib = '%s'" % oib)
         idpersonrole = self.personclass.getPersonRoleId(loggeduser)
-        print idpersonrole
-        print("ID PERSON ROLE FOR COORDINATED INSPECTION INSERT IS:" + str(idpersonrole[2][0][0]))
-        print("INSPECTION DATE FOR COORDINATED INSPECTION INSERT IS:" + inspection_date)
-        print("ID ESTABLISHMENT FOR COORDINATED INSPECTION INSERT IS:" + str(estabid[0][0]))
-        print("LAST UPDATE FOR COORDINATED INSPECTION INSERT IS:" + lastupdate)
-        print("ID USER FOR COORDINATED INSPECTION INSERT IS:" + str(idpersonrole[0][0][0]))
         ## INSERT COORDINATED INSPECTION
         if 'ROLE_CIDE_ADMIN' in loggeduser[1] or 'ROLE_CIDE_COORDINATOR' in loggeduser[1]:
             if request.path.endswith('/insert'):
-                insertcoordinatedinspection = self.connection.query("INSERT INTO cide_coordinated_inspection(id_person_role,id_establishment,inspection_date,id_user,last_update) VALUES (%s,%s,'%s','%s','%s') RETURNING id_coordinated_inspection" % (idpersonrole[2][0][0],estabid[0][0],inspection_date,idpersonrole[0][0][0],lastupdate),False)
-                vec = 'insertedOK'
+                insertcoordinatedinspection = self.connection.query("INSERT INTO cide_coordinated_inspection(id_person_role,id_establishment,inspection_date,id_user,last_update) VALUES (%s,%s,'%s','%s','%s') RETURNING id_coordinated_inspection" % (idpersonrole[2][0][0],(hashids.decode(idestablishment))[0],inspection_date,idpersonrole[0][0][0],lastupdate),False)
+                result = '{"inserted":"'+hashids.encode(insertcoordinatedinspection[0][0])+'"}'
             elif request.path.endswith('/update'):
                 coordinator = requestData['inspection_coordinator']
-                idcoordinatedinspection=self.connection.query("SELECT a.id_coordinated_inspection FROM cide_coordinated_inspection a, cide_person b WHERE a.inspection_date = '%s' AND b.person_name = '%s' AND b.person_surname = '%s'" % (inspection_date,coordinator.split(' ')[0],coordinator.split(' ')[1]))
-                print idcoordinatedinspection
-                exit()
-                insertspecificinspection = self.connection.query("UPDATE cide_coordinated_inspection SET inspection_date = %s" % (inspection_date), False)
-                vec = 'updatedOK'
+                idpersonroleinspector = (hashids.decode(requestData['inspector_id_person_role']))[0]
+                hashid = requestData['id']
+                specinspdate = requestData['inspection_date']
+                iduser = str(idpersonrole[0][0][0])
+                insertspecificinspection = self.connection.query("INSERT INTO cide_specific_inspection(id_coordinated_inspection,id_person_role,specific_inspection_date,id_user,last_update) VALUES (%s,%s,'%s','%s','%s') RETURNING id_specific_inspection" % ((hashids.decode(hashid))[0],idpersonroleinspector,specinspdate,iduser,lastupdate), False)
+                if insertspecificinspection:
+                    #UPDATE METADATA FOR COORDINATED INSPECTION
+                    updatecoordinspection = self.connection.query("UPDATE cide_coordinated_inspection SET last_update = '%s', id_user = '%s' WHERE id_coordinated_inspection = %s" % (lastupdate,iduser,(hashids.decode(hashid))[0]), False)
+                    if updatecoordinspection:
+                        result = '{"inserted":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
             self.connection.close()
-            return Response('{"message":"OK"}',mimetype='application/json')
+            return Response(result,mimetype='application/json')
         else:
             print(loggeduser[1])
             return Response('{"message":"your role %s has no right to add/update coordinated inspection"}' % loggeduser[1][0], mimetype='application/json')

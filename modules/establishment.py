@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
-from urllib import unquote
+from hashids import Hashids
 from flask_restful import Resource
 from flask import request, Response,g,jsonify
 from flask_httpauth import HTTPBasicAuth
@@ -9,6 +9,7 @@ from modules import auth as authentication
 import lib.pgsql as pgsql
 from modules import person as personcheck
 auth = HTTPBasicAuth()
+hashids = Hashids(min_length=16)
 class Establishment(Resource):
     @auth.verify_password
     def verify_pw(username, password):
@@ -32,14 +33,14 @@ class Establishment(Resource):
             for argument in request.args:
                 ### ADDED GROUP BY TO AVOID DUPLICATES ###
                 if argument == 'name':
-                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR from cide_establishment where establishment_name like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR" % ((request.args.get(argument)).encode("utf-8")).replace('*','%'))
+                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment where establishment_name like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % ((request.args.get).encode("utf-8")).replace('*', '%'))
                     connection.connect()
                     data = connection.query(sqlSelect)
                     #data = connection.query(sql=sqlSelect)
                     connection.close()
                     continue
                 elif argument == 'oib':
-                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR from cide_establishment where oib like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR" % (request.args.get(argument)).encode("utf-8").replace('*','%'))
+                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment where oib like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % (request.args.get).encode("utf-8").replace('*', '%'))
                     connection.connect()
                     data = connection.query(sql=sqlSelect)
                     connection.close()
@@ -47,22 +48,21 @@ class Establishment(Resource):
                 else:
                     return Response('{"message":"parameter %s not available"}' % str(argument),mimetype='application/json')
         else:
-            sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR from cide_establishment GROUP BY OIB,MUN_NAME,MUNIC,ADDR")
+            sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID")
             connection.connect()
             data = connection.query(sqlSelect)
             connection.close()
         if data:
             returnDataList = []
             returnDataList.append({"count": connection.numresult})
-            print data
             for row in data:
                 returnData = {}
                 returnData['oib'] = (row['oib'])
                 returnData['establishment_name'] = (row['mun_name'])
                 returnData['establishment_municipality'] = (row['munic'])
                 returnData['establishment_address'] = (row['addr'])
+                returnData['id'] = (hashids.encode(row['estabid']))
                 returnDataList.append(returnData)
-            print returnDataList
             return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
 
         '''    
