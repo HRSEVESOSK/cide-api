@@ -1,8 +1,5 @@
 # CIDE-APP
-## API ENDPOINTS
-- [/](http://apps.klimeto.com/cide-app)
-- [/establishment](http://apps.klimeto.com/cide-app/establishment)
-- [/inspection](http://apps.klimeto.com/cide-app/inspection)
+HTTP REST API and hybrid application to provide industrial harards inspectors an easy way to collect the information about establishments and inspection being conducted.
 
 ## API verzus APP authentication
 For a REST service you do not need Flask-Login. Typically in web services you do not store client state (what Flask-Login does), instead you authenticate each and every request. Flask-HTTPAuth does this for you.
