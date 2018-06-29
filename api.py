@@ -14,7 +14,16 @@ api = Api(app)
 api.add_resource(capabilities.Capabilities, '/api')
 api.add_resource(auth.Authentication, '/login', '/logout')
 api.add_resource(establishment.Establishment, '/api/establishment')
-api.add_resource(inspection.Inspection,'/api/inspection/','/api/inspection/<hashid>','/api/inspection/insert','/api/inspection/update','/api/inspection/types')
+api.add_resource(inspection.Inspection, '/api/inspection/',
+                                        '/api/inspection/<hashid>',
+                                        '/api/inspection/specific/<hashid>',
+                                        '/api/inspection/insert',
+                                        '/api/inspection/update',
+                                        '/api/inspection/type',
+                                        '/api/inspection/type/insert',
+                                        '/api/inspection/specific/criterior',
+                                        '/api/inspection/specific/issue/<hashid>',
+                                        '/api/inspection/specific/criterior/score')
 
 
 if __name__ == '__main__':

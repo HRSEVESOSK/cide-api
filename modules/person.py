@@ -17,6 +17,7 @@ class Person():
                 print("ROLE IS \n" + role)
                 createrole = self.connection.query("INSERT INTO cide_role(gs_role) VALUES ('%s') RETURNING id_role" % role,False)
                 print("ROLE CREATED WITH OID: %s" % createrole[0][0])
+                #### THE ROLE AND INSPECTION TYPE MATCHING IS BASED ON A VALUE EXTRACTED FROM THE ROLE VALUE ARRAY
                 cideroletype = role.split('_')[2]
                 id_inspection_type = self.connection.query("SELECT id_inspection_type FROM cide_specific_inspection_type WHERE des_inspection_type LIKE '"+cideroletype+"%'")
                 if id_inspection_type:

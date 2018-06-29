@@ -33,14 +33,14 @@ class Establishment(Resource):
             for argument in request.args:
                 ### ADDED GROUP BY TO AVOID DUPLICATES ###
                 if argument == 'name':
-                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment where establishment_name like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % ((request.args.get).encode("utf-8")).replace('*', '%'))
+                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment where establishment_name like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
                     connection.connect()
                     data = connection.query(sqlSelect)
                     #data = connection.query(sql=sqlSelect)
                     connection.close()
                     continue
                 elif argument == 'oib':
-                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment where oib like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % (request.args.get).encode("utf-8").replace('*', '%'))
+                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment where oib like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
                     connection.connect()
                     data = connection.query(sql=sqlSelect)
                     connection.close()
