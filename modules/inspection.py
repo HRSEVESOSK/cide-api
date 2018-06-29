@@ -119,7 +119,7 @@ class Inspection(Resource):
                 exit()
         # TODO END
 
-
+        self.connection.connect()
         coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID,a.inspection_date DATE, concat(b.person_name,' ',b.person_surname) COORDINATOR from cide_coordinated_inspection a, cide_person b WHERE a.id_establishment = %s AND a.id_user = b.id_person" %  (hashids.decode(hashid))[0])
         if not coordinspedata:
             self.connection.close()
