@@ -13,8 +13,8 @@ hashids = Hashids(min_length=16)
 class Establishment(Resource):
     @auth.verify_password
     def verify_pw(username, password):
-        print(username)
-        print(password)
+        print("UNAME IN API:"  + username)
+        print("PWD iN API: " + password)
         authenticate = authentication.Authentication()
         user = authenticate.verify_user_pass(username, password)
         print(user)

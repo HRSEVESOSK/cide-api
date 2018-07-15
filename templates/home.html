@@ -1,0 +1,18 @@
+{%- extends "index.html" %}
+
+{% block content %}
+    <div class="container-fluid">
+        {% if user %}
+
+            <h3>Welcome {{ user }} in CIDE App </h3>
+            <p>You're roles are:
+                <ol>
+                {% for role in roles %}
+                    <li value="{{ role }}">{{ role }}</li>
+                {%  endfor %}
+                </ol>
+
+            </p>
+        {% endif %}
+    </div>
+{%- endblock %}

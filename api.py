@@ -27,4 +27,4 @@ api.add_resource(inspection.Inspection, '/api/inspection/',
 
 
 if __name__ == '__main__':
-    app.run(debug=True,host=cfg.host,port=cfg.port)
+    app.run(debug=True,host=cfg.host,port=cfg.apiport)
