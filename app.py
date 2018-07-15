@@ -3,6 +3,7 @@ from flask import Flask, render_template, redirect, url_for, request,g,session
 from modules import auth as authentication
 from config import config as cfg
 from flask_basicauth import BasicAuth
+from functools import wraps
 
 app = Flask(__name__)
 
@@ -16,16 +17,45 @@ basic_auth = BasicAuth(app)
 
 app.apiURL = 'http://localhost:5001/api'
 
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        authenticate = authentication.Authentication()
+        if not auth or not authenticate.verify_user_pass(auth.username, auth.password):
+            return login()
+        return f(*args, **kwargs)
+    return decorated
+
 @app.route('/app')
 def home():
+    print("AUTH USER: %s " % app.userid)
+    print("AUTH PASS: %s " % app.userpwd)
+    print("AUTH ROLES: %s" % app.roles)
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     else:
         return render_template('home.html',user=app.userid,roles=app.roles )
 
+@app.route('/app/inspection/<id>')
+#CHECK HO TO MAKE VERIFICATION
+#@basic_auth.required()
+def getCoordInspByEstaId(id):
+    print("AUTH USER: %s " % app.userid)
+    print("AUTH PASS: %s " % app.userpwd)
+    print("AUTH ROLES: %s" % app.roles)
+    print(app.config['BASIC_AUTH_USERNAME'])
+    url = app.apiURL + '/inspection/' + id
+    response = requests.get(url, auth=(app.userid, app.userpwd))
+    return json.dumps(response.json())
+
+
 @app.route('/app/search', methods=['GET'])
-@basic_auth.required
+#@requires_auth
+#@basic_auth.check_credentials(loggedUser)
 def estabData():
+    print("AUTH USER: %s " % app.userid)
+    print("AUTH PASS: %s " % app.userpwd)
     url = app.apiURL + '/establishment'
     headers = {'Content-Type': 'application/json'}
     if request.args.get('q') == '':
@@ -43,7 +73,7 @@ def estabData():
             return render_template('establishment.html', entries=response.json())
 
     elif response.status_code == 401:
-        return "Unauthirized"
+        return redirect(url_for('login'))
 @app.route('/app/login', methods=['GET', 'POST'])
 def login():
     error = None
