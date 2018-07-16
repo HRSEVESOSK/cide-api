@@ -2,6 +2,7 @@ from flask_restful import Resource
 from flask import request,g,make_response
 from flask_httpauth import HTTPBasicAuth
 import requests,json,urllib
+from config import config as cfg
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -9,7 +10,7 @@ auth = HTTPBasicAuth()
 
 class Authentication(Resource):
     def __init__(self):
-        self.authservice = 'http://pproo.azo.hr/bifisic/services/httpbasicauth/auth'
+        self.authservice = cfg.authapi
     def get(self):
         if "login" in request.url:
             authtype = "LOGIN"

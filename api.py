@@ -19,12 +19,12 @@ api.add_resource(inspection.Inspection, '/api/inspection/',
                                         '/api/inspection/specific/<hashid>',
                                         '/api/inspection/insert',
                                         '/api/inspection/update',
-                                        '/api/inspection/type',
-                                        '/api/inspection/type/insert',
+                                        '/api/inspection/specific/type',
+                                        '/api/inspection/specific/type/insert',
                                         '/api/inspection/specific/criterior',
+                                        '/api/inspection/specific/criterior/insert',
                                         '/api/inspection/specific/issue/<hashid>',
                                         '/api/inspection/specific/criterior/score')
-
 
 if __name__ == '__main__':
     app.run(debug=True,host=cfg.host,port=cfg.apiport)

@@ -30,7 +30,7 @@ class PGSql:
     def query(self, sql, fetch=True):
         #print("Function query was called")
         #logging.info("Function query was called")
-        print("Function query was called for '%s'" % sql[0:250])
+        print("Function query was called for '%s'" % sql)
         #logging.info("Function query was called for '%s'" % sql[0:100])
         """ Execute query """
         try:
