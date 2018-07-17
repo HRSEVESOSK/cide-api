@@ -23,6 +23,7 @@ api.add_resource(inspection.Inspection, '/api/inspection/',
                                         '/api/inspection/specific/type/insert',
                                         '/api/inspection/specific/criterior',
                                         '/api/inspection/specific/criterior/insert',
+                                        '/api/inspection/specific/issue/insert',
                                         '/api/inspection/specific/issue/<hashid>',
                                         '/api/inspection/specific/criterior/score')
 

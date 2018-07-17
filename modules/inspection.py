@@ -15,6 +15,7 @@ class Inspection(Resource):
         self.connection =  pgsql.PGSql()
         self.personclass = Person.Person()
         self.apiBaseUrl = 'http://' + cfg.host + ':' + cfg.apiport + '/api'
+        self.lastUpdate = datetime.datetime.now().strftime('%Y-%m-%d')
     @auth.verify_password
     def verify_pw(username, password):
         print(username)
@@ -217,6 +218,31 @@ class Inspection(Resource):
                     self.connection.close()
                     return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
         """
+            GET LIST OF ISSUES FOR SPECIFIC INSPECTION /api/inspection/specific/issue/id_coordinated_inspection
+            ROLES ADMIN + COORDINATOR RETRIEVES ALL FOR SELECTED COORDINATED INSPECTION
+            ROLES 
+        """
+        if hashid and request.path.endswith('/specific/issue/' + hashid):
+            self.connection.connect()
+            openissuesdata = self.connection.query("SELECT * FROM cide_open_issue WHERE id_specific_inspection = %s" % (hashids.decode(hashid))[0])
+            if not openissuesdata:
+                self.connection.close()
+                return Response('{"message":"specific inspection %s has 0 openned issues"}' % hashid,mimetype='application/json')
+            else:
+                returnDataList = []
+                returnDataList.append({"count": self.connection.numresult})
+                for row in openissuesdata:
+                    returnData = {}
+                    returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
+                    returnData['inspection_coordinator'] = (row['coordinator'])
+                    returnData['id'] = (hashids.encode(row['id']))
+                    returnDataList.append(returnData)
+                self.connection.close()
+                return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+
+
+
+        """
             GET LIST OF COORDINATED INSPECTION FOR ESTABLISHMENT ID/api/inspection/id_establishment
                     ROLES ADMIN + COORDINATOR RETRIEVES ALL FOR SELECTED COORDINATED INSPECTION
                     ROLES  
@@ -258,7 +284,9 @@ class Inspection(Resource):
                 idestablishment = requestData['id']
                 inspection_date = requestData['inspection_date']
                 self.connection.connect()
-                insertcoordinatedinspection = self.connection.query("INSERT INTO cide_coordinated_inspection(id_person_role,id_establishment,inspection_date,id_user,last_update) VALUES (%s,%s,'%s','%s','%s') RETURNING id_coordinated_inspection" % (idpersonrole[2][0][0],(hashids.decode(idestablishment))[0],inspection_date,idpersonrole[0][0][0],lastupdate),False)
+                insertcoordinatedinspection = self.connection.query("INSERT INTO cide_coordinated_inspection(id_person_role,id_establishment,inspection_date,id_user,last_update) VALUES "
+                                                                    "(%s,%s,'%s','%s','%s') RETURNING id_coordinated_inspection" %
+                                                                    (idpersonrole[2][0][0],(hashids.decode(idestablishment))[0],inspection_date,idpersonrole[0][0][0],lastupdate),False)
                 self.connection.close()
                 result = '{"inserted":"'+hashids.encode(insertcoordinatedinspection[0][0])+'"}'
             elif request.path.endswith('/update'):
@@ -268,7 +296,8 @@ class Inspection(Resource):
                 specinspdate = requestData['inspection_date']
                 iduser = str(idpersonrole[0][0][0])
                 self.connection.connect()
-                insertspecificinspection = self.connection.query("INSERT INTO cide_specific_inspection(id_coordinated_inspection,id_person_role,specific_inspection_date,id_user,last_update) VALUES (%s,%s,'%s','%s','%s') RETURNING id_specific_inspection" % ((hashids.decode(hashid))[0],idpersonroleinspector,specinspdate,iduser,lastupdate), False)
+                insertspecificinspection = self.connection.query("INSERT INTO cide_specific_inspection(id_coordinated_inspection,id_person_role,specific_inspection_date,id_user,last_update) VALUES "
+                                                                 "(%s,%s,'%s','%s','%s') RETURNING id_specific_inspection" % ((hashids.decode(hashid))[0],idpersonroleinspector,specinspdate,iduser,lastupdate), False)
                 self.connection.close()
                 if insertspecificinspection:
                     #UPDATE METADATA FOR COORDINATED INSPECTION ADDING SPECIFIC INSPECTIONS
@@ -282,9 +311,27 @@ class Inspection(Resource):
                 for criteria in requestData:
                     self.connection.connect()
                     insertCriteriaForSpecificInspection = self.connection.query("INSERT INTO cide_specific_insp_criteria (id_specific_inspection, id_criterior, id_score, comments, id_user, last_update) VALUES "
-                                                                                "(%s, %s, %s, '%s', %s, '%s')" % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0], hashids.decode(criteria['id_score'])[0], criteria['comments'],idpersonrole[0][0][0],lastupdate), False)
+                                                                                "(%s, %s, %s, '%s', %s, '%s')" % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0],
+                                                                                                                  hashids.decode(criteria['id_score'])[0], criteria['comments'],idpersonrole[0][0][0],lastupdate), False)
+                    self.connection.close()
                 if insertCriteriaForSpecificInspection:
                     print insertCriteriaForSpecificInspection
+            if request.path.endswith("/specific/issue/insert"):
+                self.connection.connect()
+                insertIssueForSpecificInspection = self.connection.query("INSERT INTO cide_open_issue (id_specific_inspection, des_open_issue, acc_prescriptions, deadline_warning, acc_warning, des_indictment, id_user, last_update) VALUES "
+                                                                         "(%s,'%s',%s,'%s',%s,'%s',%s,'%s') RETURNING id_open_issue" % (hashids.decode(requestData['id_specific_inspection'])[0],
+                                                                                                                requestData['des_open_issue'],
+                                                                                                                requestData['acc_prescriptions'],
+                                                                                                                requestData['deadline_warning'],
+                                                                                                                requestData['acc_warning'],
+                                                                                                                requestData['des_indictment'],
+                                                                                                                idpersonrole[0][0][0],
+                                                                                                                lastupdate), False)
+                if insertIssueForSpecificInspection:
+                    result = '{"inserted":"' + hashids.encode(insertIssueForSpecificInspection[0][0]) + '"}'
+
+            return Response(result, mimetype='application/json')
+
 
         else:
             return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json')
