@@ -8,8 +8,11 @@ from modules import auth
 from modules import establishment
 from modules import inspection
 from config import config as cfg
+from flask_cors import CORS
 app = Flask(__name__)
 api = Api(app)
+CORS(app)
+#cors = CORS(api, resources={r"/api/*": {"origins": "*"}})
 
 api.add_resource(capabilities.Capabilities, '/api')
 api.add_resource(auth.Authentication, '/login', '/logout')
@@ -26,6 +29,13 @@ api.add_resource(inspection.Inspection, '/api/inspection/',
                                         '/api/inspection/specific/issue/insert',
                                         '/api/inspection/specific/issue/<hashid>',
                                         '/api/inspection/specific/criterior/score')
+
+@app.after_request
+def after_request(response):
+  response.headers.add('Access-Control-Allow-Origin', '*')
+  response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+  response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+  return response
 
 if __name__ == '__main__':
     app.run(debug=True,host=cfg.host,port=cfg.apiport)
