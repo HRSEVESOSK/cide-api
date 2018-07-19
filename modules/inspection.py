@@ -180,7 +180,7 @@ class Inspection(Resource):
                     return Response('{"message":"inspector %s has been asigned 0 specific inspections"}' % (hashids.encode(idpersonrole[0][0][0])),mimetype='application/json')
                 else:
                     returnDataList = []
-                    returnDataList.append({"count": self.connection.numresult})
+                    #returnDataList.append({"count": self.connection.numresult})
                     for row in specinspecdata:
                         returnData = {}
                         returnData['spec_inspection_type'] = (row['spectype'])
@@ -206,7 +206,7 @@ class Inspection(Resource):
                     return Response('{"message":"coordinated inspection %s has 0 specific inspections"}' % hashid,mimetype='application/json')
                 else:
                     returnDataList = []
-                    returnDataList.append({"count": self.connection.numresult})
+                    #returnDataList.append({"count": self.connection.numresult})
                     for row in specinspecdata:
                         returnData = {}
                         returnData['spec_inspection_type'] = (row['spectype'])
@@ -225,17 +225,22 @@ class Inspection(Resource):
         if hashid and request.path.endswith('/specific/issue/' + hashid):
             self.connection.connect()
             openissuesdata = self.connection.query("SELECT * FROM cide_open_issue WHERE id_specific_inspection = %s" % (hashids.decode(hashid))[0])
+            print openissuesdata
             if not openissuesdata:
                 self.connection.close()
                 return Response('{"message":"specific inspection %s has 0 openned issues"}' % hashid,mimetype='application/json')
             else:
                 returnDataList = []
-                returnDataList.append({"count": self.connection.numresult})
+                #returnDataList.append({"count": self.connection.numresult})
                 for row in openissuesdata:
+                    print row
                     returnData = {}
-                    returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
-                    returnData['inspection_coordinator'] = (row['coordinator'])
-                    returnData['id'] = (hashids.encode(row['id']))
+                    returnData['id'] = (hashids.encode(row[0]))
+                    returnData['issue_description'] = row[2]
+                    returnData['acc_prescription'] = row[3]
+                    returnData['deadline_warning'] = (row[4]).strftime('%Y-%m-%d')
+                    returnData['acc_warning'] = row[5]
+                    returnData['des_indictment'] = row[6]
                     returnDataList.append(returnData)
                 self.connection.close()
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
@@ -258,7 +263,7 @@ class Inspection(Resource):
                 return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid, mimetype='application/json')
             else:
                 returnDataList = []
-                returnDataList.append({"count": self.connection.numresult})
+                #returnDataList.append({"count": self.connection.numresult})
                 for row in coordinspedata:
                     returnData = {}
                     returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
