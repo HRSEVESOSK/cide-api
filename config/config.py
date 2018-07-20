@@ -1,7 +1,7 @@
 #namespace = 'KLIMETO'
 namespace = 'AZO'
-localhost = True
-development = False
+localhost = False
+development = True
 if namespace == 'KLIMETO':
     authapi = 'http://pproo.azo.hr/bifisic/services/httpbasicauth/auth'
     if localhost:
@@ -31,7 +31,7 @@ if namespace == 'AZO':
         debug = True
         authapi = 'http://192.168.1.226/bifisic/services/httpbasicauth/auth'
     elif development:
-        host = '192.168.1.93'
+        host = '192.168.1.66'
         appport = '80'
         apiport = '8080'
         dbhost = "192.168.1.226"

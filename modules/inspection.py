@@ -294,6 +294,13 @@ class Inspection(Resource):
                                                                     (idpersonrole[2][0][0],(hashids.decode(idestablishment))[0],inspection_date,idpersonrole[0][0][0],lastupdate),False)
                 self.connection.close()
                 result = '{"inserted":"'+hashids.encode(insertcoordinatedinspection[0][0])+'"}'
+            elif request.path.endswith('/delete'):
+                hashid = requestData['id']
+                self.connection.connect()
+                deletespecificinspection = self.connection.query("DELETE FROM cide_coordinated_inspection WHERE id_coordinated_inspection = %s RETURNING id_coordinated_inspection" % (hashids.decode(hashid)[0]),False)
+                self.connection.close()
+                if deletespecificinspection:
+                    result = '{"deleted":"'+hashids.encode(deletespecificinspection[0][0])+'"}'
             elif request.path.endswith('/update'):
                 coordinator = requestData['inspection_coordinator']
                 idpersonroleinspector = (hashids.decode(requestData['inspector_id_person_role']))[0]
