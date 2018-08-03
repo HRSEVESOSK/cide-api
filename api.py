@@ -7,6 +7,7 @@ from modules import capabilities
 from modules import auth
 from modules import establishment
 from modules import inspection
+from modules import upload
 from config import config as cfg
 from flask_cors import CORS
 app = Flask(__name__)
@@ -22,14 +23,17 @@ api.add_resource(inspection.Inspection, '/api/inspection/',
                                         '/api/inspection/insert',
                                         '/api/inspection/update',
                                         '/api/inspection/delete',
+                                        '/api/inspection/specific/delete',
                                         '/api/inspection/specific/<hashid>',
                                         '/api/inspection/specific/type',
-                                        '/api/inspection/specific/type/ insert',
+                                        '/api/inspection/specific/type/insert',
                                         '/api/inspection/specific/criterior',
                                         '/api/inspection/specific/criterior/insert',
                                         '/api/inspection/specific/issue/insert',
                                         '/api/inspection/specific/issue/<hashid>',
-                                        '/api/inspection/specific/criterior/score')
+                                        '/api/inspection/specific/criterior/score',
+                                        '/api/inspection/specific/report/upload')
+api.add_resource(upload.Upload, '/api/inspection/upload', '/api/inspection/specific/upload')
 
 @app.after_request
 def after_request(response):

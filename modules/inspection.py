@@ -85,7 +85,7 @@ class Inspection(Resource):
                     returnDataList.append(families)
                 self.connection.close()
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
-            elif 'ROLE_CIDE_ADMIN' in g.user[1]:
+            elif 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
                 self.connection.connect()
                 critfamid = self.connection.query(
                     "SELECT id_criterior_family ID, criterior_family FVALUE FROM cide_criterior_family")  ### WHERE SPECIFIC INSPECTION TYPE ID
@@ -111,8 +111,10 @@ class Inspection(Resource):
         """
            INSERTION SPECIFIC INSPECTION TYPE ONLY FOR ADMIN /api/inspection/specific/type/insert?type=TEST&dismissed=True
         """
+        '''
         if not hashid and not request.path.endswith('/specific/type') and not request.path.endswith('/specific/type/insert'):
             return Response('{"message":"missing filter"}', mimetype='application/json')
+        '''
         if not hashid and request.path.endswith("/specific/type/insert"):
             if 'ROLE_CIDE_ADMIN' in g.user[1]:
                 insptype = request.args.get('type')
@@ -172,7 +174,8 @@ class Inspection(Resource):
                                                        "b.des_inspection_type SPECTYPE, "
                                                        "a.specific_inspection_date DATE, "
                                                        "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
-                                                       "a.final_report REPORT "
+                                                       "a.final_report REPORT, "
+                                                       "a.last_update UPDATED "
                                                        "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
                                                        "WHERE a.id_person_role = %s AND d.id_person_role = a.id_person_role AND c.id_person = d.id_person AND b.id_inspection_type = d.id_inspection_type" % idpersonrole[2][0][0])
                 self.connection.close()
@@ -187,18 +190,20 @@ class Inspection(Resource):
                         returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
                         returnData['spec_inspection_inspector'] = (row['inspector'])
                         returnData['spec_inspection_report'] = (row['report'])
+                        returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
                         returnData['id'] = (hashids.encode(row['id']))
                         returnDataList.append(returnData)
                     self.connection.close()
                     return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
-            elif 'ROLE_CIDE_ADMIN' in g.user[1]:
+            elif 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR':
                 self.connection.connect()
                 print("ID COORD INSP: %s" % (hashids.decode(hashid))[0])
                 specinspecdata = self.connection.query("SELECT a.id_specific_inspection ID, "
                                                        "b.des_inspection_type SPECTYPE, "
                                                        "a.specific_inspection_date DATE, "
                                                        "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
-                                                       "a.final_report REPORT "
+                                                       "a.final_report REPORT, "
+                                                       "a.last_update UPDATED "
                                                        "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
                                                        "WHERE a.id_coordinated_inspection = %s AND d.id_person_role = a.id_person_role AND c.id_person = d.id_person AND b.id_inspection_type = d.id_inspection_type" % (hashids.decode(hashid))[0])
                 self.connection.close()
@@ -214,6 +219,7 @@ class Inspection(Resource):
                         returnData['spec_inspection_inspector'] = (row['inspector'])
                         returnData['spec_inspection_report'] = (row['report'])
                         returnData['id'] = (hashids.encode(row['id']))
+                        returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
                         returnDataList.append(returnData)
                     self.connection.close()
                     return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
@@ -254,10 +260,17 @@ class Inspection(Resource):
                 """
         if hashid and request.path.endswith('/' + hashid):
             self.connection.connect()
-            coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID, "
-                                                   "a.inspection_date DATE, "
-                                                   "concat(b.person_name,' ',b.person_surname) COORDINATOR from cide_coordinated_inspection a, cide_person b "
-                                                   "WHERE a.id_establishment = %s AND a.id_user = b.id_person" %  (hashids.decode(hashid))[0])
+            coordinspedata = self.connection.query("SELECT   a.id_coordinated_inspection ID, "
+                                                            "a.inspection_date DATE, "
+                                                            "concat(b.person_name,' ',b.person_surname) COORDINATOR, "
+                                                            "count(c.id_specific_inspection) SICOUNT "
+                                                    "FROM cide_coordinated_inspection a "
+                                                    "LEFT JOIN cide_person b "
+                                                    "ON a.id_user = b.id_person "
+                                                    "LEFT JOIN cide_specific_inspection c "
+                                                    "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
+                                                    "WHERE a.id_establishment = %s "
+                                                    "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname" %  (hashids.decode(hashid))[0])
             if not coordinspedata:
                 self.connection.close()
                 return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid, mimetype='application/json')
@@ -269,6 +282,7 @@ class Inspection(Resource):
                     returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
                     returnData['inspection_coordinator'] = (row['coordinator'])
                     returnData['id'] = (hashids.encode(row['id']))
+                    returnData['si_count'] = (row['sicount'])
                     returnDataList.append(returnData)
                 self.connection.close()
                 return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
@@ -284,8 +298,10 @@ class Inspection(Resource):
         requestData = request.get_json()
         lastupdate = datetime.datetime.now().strftime('%Y-%m-%d')
         ## INSERT COORDINATED INSPECTION
-        if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
-            if request.path.endswith('/insert'):
+        if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' or 'ROLE_CIDE_SMS' in g.user[1]:
+            if request.path.endswith('/specific/report/upload'):
+                file = request.files['file']
+            elif request.path.endswith('/insert'):
                 idestablishment = requestData['id']
                 inspection_date = requestData['inspection_date']
                 self.connection.connect()
@@ -294,6 +310,15 @@ class Inspection(Resource):
                                                                     (idpersonrole[2][0][0],(hashids.decode(idestablishment))[0],inspection_date,idpersonrole[0][0][0],lastupdate),False)
                 self.connection.close()
                 result = '{"inserted":"'+hashids.encode(insertcoordinatedinspection[0][0])+'"}'
+            elif request.path.endswith('/specific/delete'):
+                hashid = requestData['id']
+                self.connection.connect()
+                deletespecificinspection = self.connection.query("DELETE FROM cide_specific_inspection WHERE id_specific_inspection = %s RETURNING id_specific_inspection" % (hashids.decode(hashid)[0]), False)
+                self.connection.close()
+                if deletespecificinspection:
+                    result = '{"deleted":"' + hashids.encode(deletespecificinspection[0][0]) + '"}'
+                else:
+                    result = '{"deleted":0}'
             elif request.path.endswith('/delete'):
                 hashid = requestData['id']
                 self.connection.connect()
@@ -301,19 +326,25 @@ class Inspection(Resource):
                 self.connection.close()
                 if deletespecificinspection:
                     result = '{"deleted":"'+hashids.encode(deletespecificinspection[0][0])+'"}'
+                else:
+                    result = '{"deleted":0}'
             elif request.path.endswith('/update'):
                 coordinator = requestData['inspection_coordinator']
                 idpersonroleinspector = (hashids.decode(requestData['inspector_id_person_role']))[0]
                 hashid = requestData['id']
                 specinspdate = requestData['inspection_date']
                 iduser = str(idpersonrole[0][0][0])
+                print("**** INSERTING RECORD to SI table")
                 self.connection.connect()
                 insertspecificinspection = self.connection.query("INSERT INTO cide_specific_inspection(id_coordinated_inspection,id_person_role,specific_inspection_date,id_user,last_update) VALUES "
                                                                  "(%s,%s,'%s','%s','%s') RETURNING id_specific_inspection" % ((hashids.decode(hashid))[0],idpersonroleinspector,specinspdate,iduser,lastupdate), False)
                 self.connection.close()
+                print("**** UPDATING record for coordinated inspecton to SI table")
                 if insertspecificinspection:
                     #UPDATE METADATA FOR COORDINATED INSPECTION ADDING SPECIFIC INSPECTIONS
+                    self.connection.connect()
                     updatecoordinspection = self.connection.query("UPDATE cide_coordinated_inspection SET last_update = '%s', id_user = '%s' WHERE id_coordinated_inspection = %s" % (lastupdate,iduser,(hashids.decode(hashid))[0]), False)
+                    self.connection.close()
                     if updatecoordinspection:
                         result = '{"inserted":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
             return Response(result,mimetype='application/json')
@@ -347,8 +378,3 @@ class Inspection(Resource):
 
         else:
             return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json')
-
-
-
-
-

@@ -26,12 +26,13 @@ if namespace == 'AZO':
         dbname = "BIFISIC"
         dbuser = "bifisic"
         dbpwd = "mypass"
-        tempDataDir = '/scratch/cide-app/temp'
-        logsDir = '/scratch/cide-app/logs'
+        tempDataDir = 'data'
+        extensions = 'pdf'
+        logsDir = 'logs'
         debug = True
         authapi = 'http://192.168.1.226/bifisic/services/httpbasicauth/auth'
     elif development:
-        host = '192.168.1.66'
+        host = '192.168.1.77'
         appport = '80'
         apiport = '8080'
         dbhost = "192.168.1.226"
@@ -39,8 +40,9 @@ if namespace == 'AZO':
         dbname = "BIFISIC"
         dbuser = "bifisic"
         dbpwd = "mypass"
-        tempDataDir = '/scratch/cide-app/temp'
-        logsDir = '/scratch/cide-app/logs'
+        tempDataDir = 'data\upload'
+        extensions = ['pdf','doc','docx']
+        logsDir = 'logs'
         debug = True
         authapi = 'http://192.168.1.226/bifisic/services/httpbasicauth/auth'
     else:
