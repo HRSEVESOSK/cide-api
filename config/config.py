@@ -1,7 +1,7 @@
-#namespace = 'KLIMETO'
-namespace = 'AZO'
-localhost = False
-development = True
+namespace = 'KLIMETO'
+#namespace = 'AZO'
+localhost = True
+development = False
 if namespace == 'KLIMETO':
     authapi = 'http://pproo.azo.hr/bifisic/services/httpbasicauth/auth'
     if localhost:
@@ -13,8 +13,9 @@ if namespace == 'KLIMETO':
         dbname = "cidedb"
         dbuser = "cideuser"
         dbpwd = "cidepwd"
-        tempDataDir = '/scratch/cide-app/temp'
-        logsDir = '/scratch/cide-app/logs'
+        tempDataDir = 'data\upload'
+        extensions = ['pdf', 'doc', 'docx']
+        logsDir = 'data\logs'
         debug = True
 if namespace == 'AZO':
     if localhost:
