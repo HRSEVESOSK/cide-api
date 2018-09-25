@@ -243,10 +243,12 @@ class Inspection(Resource):
                     returnData = {}
                     returnData['id'] = (hashids.encode(row[0]))
                     returnData['issue_description'] = row[2]
-                    returnData['acc_prescription'] = row[3]
+                    returnData['acc_prescriptions'] = row[3]
                     returnData['deadline_warning'] = (row[4]).strftime('%Y-%m-%d')
                     returnData['acc_warning'] = row[5]
                     returnData['des_indictment'] = row[6]
+                    returnData['last_update'] = (row[8]).strftime('%Y-%m-%d')
+                    returnData['id_specific_inspection'] = hashid
                     returnDataList.append(returnData)
                 self.connection.close()
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
@@ -290,6 +292,7 @@ class Inspection(Resource):
     @auth.login_required
     def post(self):
         specInspTypes = []
+        result = False
         self.connection.connect()
         for type in self.connection.query("SELECT split_part(des_inspection_type, '/', 1) from cide_specific_inspection_type"):
             specInspTypes.append(type[0])
@@ -298,10 +301,8 @@ class Inspection(Resource):
         requestData = request.get_json()
         lastupdate = datetime.datetime.now().strftime('%Y-%m-%d')
         ## INSERT COORDINATED INSPECTION
-        if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' or 'ROLE_CIDE_SMS' in g.user[1]:
-            if request.path.endswith('/specific/report/upload'):
-                file = request.files['file']
-            elif request.path.endswith('/insert'):
+        if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]: # or 'ROLE_CIDE_SMS' in g.user[1]:
+            if request.path.endswith('inspection/insert'):
                 idestablishment = requestData['id']
                 inspection_date = requestData['inspection_date']
                 self.connection.connect()
@@ -347,34 +348,86 @@ class Inspection(Resource):
                     self.connection.close()
                     if updatecoordinspection:
                         result = '{"inserted":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
-            return Response(result,mimetype='application/json')
-
         elif any(ext in g.user[1][0] for ext in specInspTypes):
+            #### INSERT OR UDPATE CITERIA SCORING #####
             if request.path.endswith("/specific/criterior/insert"):
+                inserted = 0
+                updated = 0
                 for criteria in requestData:
+                    if 'comments' not in criteria:
+                        criteria['comments'] = ''
                     self.connection.connect()
-                    insertCriteriaForSpecificInspection = self.connection.query("INSERT INTO cide_specific_insp_criteria (id_specific_inspection, id_criterior, id_score, comments, id_user, last_update) VALUES "
-                                                                                "(%s, %s, %s, '%s', %s, '%s')" % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0],
-                                                                                                                  hashids.decode(criteria['id_score'])[0], criteria['comments'],idpersonrole[0][0][0],lastupdate), False)
+                    #CHECK IF DB
+                    id_specific_inspection = self.connection.query("SELECT id_specific_inspection FROM "
+                                                                   "cide_specific_insp_criteria WHERE "
+                                                                   "id_specific_inspection=%s AND "
+                                                                   "id_criterior=%s"
+                                                                   % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0]))
+                    if not id_specific_inspection:
+                        #INSERTING
+                        print("Inserting score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],criteria['comments'],hashids.decode(criteria['id_specific_inspection'])[0]))
+                        insertCriteriumForSi = self.connection.query("INSERT INTO cide_specific_insp_criteria (id_specific_inspection, id_criterior, id_score, comments, id_user, last_update) VALUES "
+                                                                                "(%s, %s, %s, '%s', %s, '%s') RETURNING id_specific_inspection" % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0],
+                                                                                                                 hashids.decode(criteria['id_score'])[0], criteria['comments'],idpersonrole[0][0][0],lastupdate), False)
+                        if insertCriteriumForSi:
+                            inserted = inserted + 1
+                    else:
+                        print("Updating score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],criteria['comments'],id_specific_inspection[0][0]))
+                        updateCriteriumForCi = self.connection.query("UPDATE cide_specific_insp_criteria SET"
+                                                                     "  id_score=%s, comments='%s', id_user=%s, last_update = '%s' "
+                                                                     "WHERE id_specific_inspection=%s AND id_criterior=%s RETURNING id_specific_inspection" % (hashids.decode(criteria['id_score'])[0],criteria['comments'],idpersonrole[0][0][0],
+                                                                                                                              lastupdate,id_specific_inspection[0][0],hashids.decode(criteria['id_criterior'])[0]), False)
+                        if updateCriteriumForCi:
+                            updated = updated + 1
                     self.connection.close()
-                if insertCriteriaForSpecificInspection:
-                    print insertCriteriaForSpecificInspection
+                    result = '{"inserted":'+str(inserted)+',"updated":'+str(updated)+'}'
+                    print(result)
+
+
+            #### INSERT ISSUES ####
             if request.path.endswith("/specific/issue/insert"):
-                self.connection.connect()
-                insertIssueForSpecificInspection = self.connection.query("INSERT INTO cide_open_issue (id_specific_inspection, des_open_issue, acc_prescriptions, deadline_warning, acc_warning, des_indictment, id_user, last_update) VALUES "
-                                                                         "(%s,'%s',%s,'%s',%s,'%s',%s,'%s') RETURNING id_open_issue" % (hashids.decode(requestData['id_specific_inspection'])[0],
-                                                                                                                requestData['des_open_issue'],
-                                                                                                                requestData['acc_prescriptions'],
-                                                                                                                requestData['deadline_warning'],
-                                                                                                                requestData['acc_warning'],
-                                                                                                                requestData['des_indictment'],
-                                                                                                                idpersonrole[0][0][0],
-                                                                                                                lastupdate), False)
-                if insertIssueForSpecificInspection:
-                    result = '{"inserted":"' + hashids.encode(insertIssueForSpecificInspection[0][0]) + '"}'
-
-            return Response(result, mimetype='application/json')
-
-
+                inserted = 0
+                updated = 0
+                for issue in requestData:
+                    if 'issue_description' not in issue:
+                        issue['issue_description'] = ''
+                    if 'acc_warning' not in issue:
+                        issue['acc_warning'] = ''
+                    if 'des_indictment' not in issue:
+                        issue['des_indictment'] = ''
+                    print issue
+                    if "id" in issue:
+                        #UPDATING ISSUE
+                        self.connection.connect()
+                        updateIssue = self.connection.query("UPDATE cide_open_issue SET "
+                                                            "id_specific_inspection=%s, des_open_issue='%s', acc_prescriptions=%s, deadline_warning='%s', acc_warning=%s, des_indictment='%s', id_user=%s, last_update='%s' "
+                                                            "WHERE id_open_issue=%s RETURNING id_open_issue" % (hashids.decode(issue['id_specific_inspection'])[0],
+                                                                            issue['issue_description'],
+                                                                            issue['acc_prescriptions'],
+                                                                            issue['deadline_warning'],
+                                                                            issue['acc_warning'],
+                                                                            issue['des_indictment'],
+                                                                            idpersonrole[0][0][0],
+                                                                            lastupdate,hashids.decode(issue['id'])[0]), False)
+                        self.connection.close()
+                        if updateIssue:
+                            updated = updated + 1
+                    else:
+                        self.connection.connect()
+                        insertIssue = self.connection.query("INSERT INTO cide_open_issue (id_specific_inspection, des_open_issue, acc_prescriptions, deadline_warning, acc_warning, des_indictment, id_user, last_update) VALUES "
+                                                                                 "(%s,'%s',%s,'%s',%s,'%s',%s,'%s') RETURNING id_open_issue" % (hashids.decode(issue['id_specific_inspection'])[0],
+                                                                                issue['issue_description'],
+                                                                                issue['acc_prescriptions'],
+                                                                                issue['deadline_warning'],
+                                                                                issue['acc_warning'],
+                                                                                issue['des_indictment'],
+                                                                                idpersonrole[0][0][0],
+                                                                                lastupdate), False)
+                        self.connection.close()
+                        if insertIssue:
+                            inserted = inserted + 1
+                    result = '{"inserted":' + str(inserted) + ',"updated":' + str(updated) + '}'
+        if not result:
+            return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json',status=401)
         else:
-            return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json')
+            return Response(result, mimetype='application/json')
