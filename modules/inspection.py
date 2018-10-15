@@ -15,7 +15,6 @@ class Inspection(Resource):
         self.connection =  pgsql.PGSql()
         self.personclass = Person.Person()
         self.apiBaseUrl = 'http://' + cfg.host + ':' + cfg.apiport + '/api'
-        self.lastUpdate = datetime.datetime.now().strftime('%Y-%m-%d')
     @auth.verify_password
     def verify_pw(username, password):
         print(username)
@@ -217,7 +216,10 @@ class Inspection(Resource):
                         returnData['spec_inspection_type'] = (row['spectype'])
                         returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
                         returnData['spec_inspection_inspector'] = (row['inspector'])
-                        returnData['spec_inspection_report'] = (row['report'])
+                        if row['report'] is None:
+                            returnData['spec_inspection_report'] = (row['report'])
+                        else:
+                            returnData['spec_inspection_report'] = 1
                         returnData['id'] = (hashids.encode(row['id']))
                         returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
                         returnDataList.append(returnData)
