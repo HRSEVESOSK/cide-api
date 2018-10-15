@@ -176,7 +176,11 @@ class Inspection(Resource):
                                                        "a.final_report REPORT, "
                                                        "a.last_update UPDATED "
                                                        "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
-                                                       "WHERE a.id_person_role = %s AND d.id_person_role = a.id_person_role AND c.id_person = d.id_person AND b.id_inspection_type = d.id_inspection_type" % idpersonrole[2][0][0])
+                                                       "WHERE a.id_coordinated_inspection = %s "
+                                                       "AND a.id_person_role = %s "
+                                                       "AND d.id_person_role = a.id_person_role "
+                                                       "AND c.id_person = d.id_person "
+                                                       "AND b.id_inspection_type = d.id_inspection_type" % ((hashids.decode(hashid))[0],idpersonrole[2][0][0]))
                 self.connection.close()
                 if not specinspecdata:
                     return Response('{"message":"inspector %s has been asigned 0 specific inspections"}' % (hashids.encode(idpersonrole[0][0][0])),mimetype='application/json')
@@ -188,7 +192,10 @@ class Inspection(Resource):
                         returnData['spec_inspection_type'] = (row['spectype'])
                         returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
                         returnData['spec_inspection_inspector'] = (row['inspector'])
-                        returnData['spec_inspection_report'] = (row['report'])
+                        if row['report'] is None:
+                            returnData['spec_inspection_report'] = (row['report'])
+                        else:
+                            returnData['spec_inspection_report'] = 1
                         returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
                         returnData['id'] = (hashids.encode(row['id']))
                         returnDataList.append(returnData)
@@ -318,6 +325,7 @@ class Inspection(Resource):
                 self.connection.connect()
                 deletespecificinspection = self.connection.query("DELETE FROM cide_specific_inspection WHERE id_specific_inspection = %s RETURNING id_specific_inspection" % (hashids.decode(hashid)[0]), False)
                 self.connection.close()
+
                 if deletespecificinspection:
                     result = '{"deleted":"' + hashids.encode(deletespecificinspection[0][0]) + '"}'
                 else:
@@ -384,8 +392,6 @@ class Inspection(Resource):
                     self.connection.close()
                     result = '{"inserted":'+str(inserted)+',"updated":'+str(updated)+'}'
                     print(result)
-
-
             #### INSERT ISSUES ####
             if request.path.endswith("/specific/issue/insert"):
                 inserted = 0
@@ -397,7 +403,6 @@ class Inspection(Resource):
                         issue['acc_warning'] = ''
                     if 'des_indictment' not in issue:
                         issue['des_indictment'] = ''
-                    print issue
                     if "id" in issue:
                         #UPDATING ISSUE
                         self.connection.connect()
