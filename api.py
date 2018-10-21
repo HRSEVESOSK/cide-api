@@ -31,6 +31,7 @@ api.add_resource(inspection.Inspection, '/api/inspection/',
                                         '/api/inspection/specific/criterior/insert',
                                         '/api/inspection/specific/issue/insert',
                                         '/api/inspection/specific/issue/<hashid>',
+                                        '/api/inspection/specific/score/<hashid>',
                                         '/api/inspection/specific/criterior/score',
                                         '/api/inspection/specific/report/upload')
 api.add_resource(upload.Upload, '/api/inspection/upload', '/api/inspection/specific/upload','/api/inspection/specific/download/<hashid>')

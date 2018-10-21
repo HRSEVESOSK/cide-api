@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import json,datetime,sys,requests
+
+import todo as todo
 from flask_restful import Resource
 from hashids import Hashids
 from flask import request, Response,g,jsonify
@@ -261,8 +263,22 @@ class Inspection(Resource):
                     returnDataList.append(returnData)
                 self.connection.close()
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
-
-
+        if hashid and request.path.endswith('/specific/score/' + hashid):
+            print("*** Endpoint /inspection/specific/score was called for '{}'".format(hashid))
+            self.connection.connect()
+            scoredata = self.connection.query("SELECT * FROM cide_specific_insp_criteria WHERE id_specific_inspection = %s" % (hashids.decode(hashid))[0])
+            #TODO
+            scores = []
+            for row in scoredata:
+                returnData = {}
+                returnData['id_specific_inspection'] = row[0]
+                returnData['id_criterior'] = row[1]
+                returnData['id_score'] = row[2]
+                returnData['comments'] = row[3]
+                returnData['id_user'] = row[4]
+                returnData['last_update'] = (row[5]).strftime('%Y-%m-%d')
+                scores.append(returnData)
+            print scores
 
         """
             GET LIST OF COORDINATED INSPECTION FOR ESTABLISHMENT ID/api/inspection/id_establishment
