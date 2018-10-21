@@ -281,7 +281,7 @@ class Inspection(Resource):
                                                     "LEFT JOIN cide_specific_inspection c "
                                                     "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
                                                     "WHERE a.id_establishment = %s "
-                                                    "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname" %  (hashids.decode(hashid))[0])
+                                                    "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname ORDER BY a.last_update DESC" %  (hashids.decode(hashid))[0])
             if not coordinspedata:
                 self.connection.close()
                 return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid, mimetype='application/json')
