@@ -148,12 +148,12 @@ class Inspection(Resource):
                 returnData['name'] = (row['instype']).split('/')[1]
                 ##APPEN INSPECTORS TO INSPECTION TYPES
                 personids = self.connection.query("SELECT id_person IDP, id_person_role IDPR  FROM cide_person_role WHERE id_inspection_type = %s" % row['id'])
-                print personids
                 if personids:
                     inspectors = []
                     for person in personids:
                         inspector = {}
-                        inspector['fullname'] = (self.connection.query("SELECT concat(person_name,' ',person_surname) FULLNAME FROM cide_person WHERE id_person = %s" % person[0]))[0][0]
+                        #inspector['fullname'] = (self.connection.query("SELECT concat(person_name,' ',person_surname) FULLNAME FROM cide_person WHERE id_person = %s" % person[0]))[0][0]
+                        inspector['fullname'] = (self.connection.query("SELECT organisation FULLNAME FROM cide_person WHERE id_person = %s" % person[0]))[0][0]
                         inspector['id'] = hashids.encode(person[1])
                         inspectors.append(inspector)
                     returnData['inspectors'] = inspectors
@@ -246,39 +246,43 @@ class Inspection(Resource):
             if not openissuesdata:
                 self.connection.close()
                 return Response('{"message":"specific inspection %s has 0 openned issues"}' % hashid,mimetype='application/json')
-            else:
-                returnDataList = []
-                #returnDataList.append({"count": self.connection.numresult})
-                for row in openissuesdata:
-                    print row
-                    returnData = {}
-                    returnData['id'] = (hashids.encode(row[0]))
-                    returnData['issue_description'] = row[2]
-                    returnData['acc_prescriptions'] = row[3]
-                    returnData['deadline_warning'] = (row[4]).strftime('%Y-%m-%d')
-                    returnData['acc_warning'] = row[5]
-                    returnData['des_indictment'] = row[6]
-                    returnData['last_update'] = (row[8]).strftime('%Y-%m-%d')
-                    returnData['id_specific_inspection'] = hashid
-                    returnDataList.append(returnData)
+            returnDataList = []
+            # returnDataList.append({"count": self.connection.numresult})
+            for row in openissuesdata:
+                returnData = {}
+                returnData['id'] = (hashids.encode(row[0]))
+                returnData['issue_description'] = row[2]
+                returnData['acc_prescriptions'] = row[3]
+                returnData['deadline_warning'] = (row[4]).strftime('%Y-%m-%d')
+                returnData['acc_warning'] = row[5]
+                returnData['des_indictment'] = row[6]
+                returnData['last_update'] = (row[8]).strftime('%Y-%m-%d')
+                returnData['id_specific_inspection'] = hashid
+                returnDataList.append(returnData)
                 self.connection.close()
-                return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+            return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+
         if hashid and request.path.endswith('/specific/score/' + hashid):
             print("*** Endpoint /inspection/specific/score was called for '{}'".format(hashid))
             self.connection.connect()
             scoredata = self.connection.query("SELECT * FROM cide_specific_insp_criteria WHERE id_specific_inspection = %s" % (hashids.decode(hashid))[0])
+            if not scoredata:
+                self.connection.close()
+                return Response('{"message":"specific inspection %s has 0 scores created"}' % hashid,mimetype='application/json')
             #TODO
             scores = []
             for row in scoredata:
                 returnData = {}
-                returnData['id_specific_inspection'] = row[0]
-                returnData['id_criterior'] = row[1]
-                returnData['id_score'] = row[2]
+                returnData['id_specific_inspection'] = hashids.encode(row[0])
+                returnData['id_criterior'] = hashids.encode(row[1])
+                returnData['id_score'] = hashids.encode(row[2])
                 returnData['comments'] = row[3]
-                returnData['id_user'] = row[4]
+                returnData['id_user'] = hashids.encode(row[4])
                 returnData['last_update'] = (row[5]).strftime('%Y-%m-%d')
                 scores.append(returnData)
+            self.connection.close()
             print scores
+            return Response(json.dumps(scores, ensure_ascii=False), mimetype='application/json')
 
         """
             GET LIST OF COORDINATED INSPECTION FOR ESTABLISHMENT ID/api/inspection/id_establishment
