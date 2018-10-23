@@ -423,6 +423,8 @@ class Inspection(Resource):
                         issue['acc_warning'] = ''
                     if 'des_indictment' not in issue:
                         issue['des_indictment'] = ''
+                    if 'acc_prescriptions' not in issue:
+                        issue['acc_prescriptions'] = ''
                     if "id" in issue:
                         #UPDATING ISSUE
                         self.connection.connect()
