@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import json,datetime,sys,requests
-
-import todo as todo
 from flask_restful import Resource
 from hashids import Hashids
 from flask import request, Response,g,jsonify
