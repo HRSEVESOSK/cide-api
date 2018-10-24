@@ -33,16 +33,22 @@ class Establishment(Resource):
             for argument in request.args:
                 ### ADDED GROUP BY TO AVOID DUPLICATES ###
                 if argument == 'name':
-                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID, count(id_coordinated_inspection) CICOUNT FROM "
-                                 "cide_establishment LEFT JOIN cide_coordinated_inspection ON id_establishment = id where establishment_name like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
+                    sqlSelect = ("SELECT oib OIB, establishment_name MUN_NAME, naziv MUNIC, concat(street,' ',street_number) ADDR, cide_establishment.id ESTABID, count(id_coordinated_inspection) CICOUNT, company_name FIRMA "
+                                 "FROM cide_establishment "
+                                 "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
+                                 "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
+                                 "WHERE establishment_name LIKE '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID,last_update ORDER BY last_update DESC NULLS LAST" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
                     connection.connect()
                     data = connection.query(sqlSelect)
                     #data = connection.query(sql=sqlSelect)
                     connection.close()
                     continue
                 elif argument == 'oib':
-                    sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID, count(id_coordinated_inspection) CICOUNT FROM "
-                                 "cide_establishment LEFT JOIN cide_coordinated_inspection ON id_establishment = id where oib like '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
+                    sqlSelect = ("SELECT oib OIB, establishment_name MUN_NAME, naziv MUNIC, concat(street,' ',street_number) ADDR, cide_establishment.id ESTABID, count(id_coordinated_inspection) CICOUNT, company_name FIRMA "
+                                 "FROM cide_establishment "
+                                 "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
+                                 "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
+                                 "WHERE oib LIKE '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID,last_update ORDER BY last_update DESC NULLS LAST" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
                     connection.connect()
                     data = connection.query(sql=sqlSelect)
                     connection.close()
@@ -51,8 +57,12 @@ class Establishment(Resource):
                     return Response('{"message":"parameter %s not available"}' % str(argument),mimetype='application/json')
         else:
             #sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID")
-            sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID, count(id_coordinated_inspection) CICOUNT FROM"
-                         " cide_establishment LEFT JOIN cide_coordinated_inspection ON id_establishment = id GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID")
+            sqlSelect = ("select oib OIB,establishment_name MUN_NAME,naziv MUNIC,concat(street,' ',street_number) ADDR,cide_establishment.id ESTABID,count(id_coordinated_inspection) CICOUNT, company_name FIRMA "
+                         "FROM cide_establishment "
+                         "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
+                         "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
+                         "GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID,last_update "
+                         "ORDER BY last_update DESC NULLS LAST")
             connection.connect()
             data = connection.query(sqlSelect)
             connection.close()
@@ -67,6 +77,7 @@ class Establishment(Resource):
                 returnData['establishment_address'] = (row['addr'])
                 returnData['id'] = (hashids.encode(row['estabid']))
                 returnData['ci_count'] = row['cicount']
+                returnData['establishment_operator'] = row['firma']
                 returnDataList.append(returnData)
             return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
 

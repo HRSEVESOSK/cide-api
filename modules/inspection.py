@@ -409,11 +409,12 @@ class Inspection(Resource):
                             updated = updated + 1
                     self.connection.close()
                     result = '{"inserted":'+str(inserted)+',"updated":'+str(updated)+'}'
-                    print(result)
             #### INSERT ISSUES ####
             if request.path.endswith("/specific/issue/insert"):
                 inserted = 0
                 updated = 0
+                deleted = 0
+                currentIssues = []
                 for issue in requestData:
                     if 'issue_description' not in issue:
                         issue['issue_description'] = ''
@@ -424,6 +425,7 @@ class Inspection(Resource):
                     if 'acc_prescriptions' not in issue:
                         issue['acc_prescriptions'] = ''
                     if "id" in issue:
+                        currentIssues.append(hashids.decode(issue['id'])[0])
                         #UPDATING ISSUE
                         self.connection.connect()
                         updateIssue = self.connection.query("UPDATE cide_open_issue SET "
@@ -452,8 +454,24 @@ class Inspection(Resource):
                                                                                 lastupdate), False)
                         self.connection.close()
                         if insertIssue:
+                            currentIssues.append(insertIssue[0][0])
                             inserted = inserted + 1
-                    result = '{"inserted":' + str(inserted) + ',"updated":' + str(updated) + '}'
+                ## CHECK DELETED
+                self.connection.connect()
+                ### CHECK DELETED ISSUES
+                issuesForCI = self.connection.query("SELECT id_open_issue FROM cide_open_issue WHERE "
+                                                    "id_specific_inspection=%s" % (hashids.decode(issue['id_specific_inspection'])[0]))
+                issuesForCIFlattened = [item for sublist in issuesForCI for item in sublist]
+                if len(issuesForCIFlattened) != len(currentIssues):
+                    toBedeleted = set(issuesForCIFlattened).difference(currentIssues)
+                    toBedeletedOids = list(toBedeleted)
+                    if len(toBedeletedOids) > 0:
+                        self.connection.connect()
+                        deleteIssues = self.connection.query("DELETE FROM cide_open_issue WHERE id_open_issue IN (%s) RETURNING id_open_issue" % (','.join(map(str,toBedeletedOids))),False)
+                        print("DELETED ISSUES: ", deleteIssues)
+                        if deleteIssues:
+                            deleted = deleted + len(deleteIssues)
+                result = '{"inserted":' + str(inserted) + ',"updated":' + str(updated) + ',"deleted":'+str(deleted)+'}'
         if not result:
             return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json',status=401)
         else:
