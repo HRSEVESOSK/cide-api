@@ -210,6 +210,7 @@ class Inspection(Resource):
                                                        "b.des_inspection_type SPECTYPE, "
                                                        "a.specific_inspection_date DATE, "
                                                        "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
+                                                       "c.organisation ORGANISATION, "
                                                        "a.final_report REPORT, "
                                                        "a.last_update UPDATED "
                                                        "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
@@ -225,6 +226,7 @@ class Inspection(Resource):
                         returnData['spec_inspection_type'] = (row['spectype'])
                         returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
                         returnData['spec_inspection_inspector'] = (row['inspector'])
+                        returnData['spec_inspection_organisation'] = (row['organisation'])
                         if row['report'] is None:
                             returnData['spec_inspection_report'] = (row['report'])
                         else:
