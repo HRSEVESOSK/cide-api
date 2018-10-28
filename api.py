@@ -20,6 +20,7 @@ api.add_resource(auth.Authentication, '/login', '/logout')
 api.add_resource(establishment.Establishment, '/api/establishment')
 api.add_resource(inspection.Inspection, '/api/inspection/',
                                         '/api/inspection/<hashid>',
+                                        '/api/inspection/type',
                                         '/api/inspection/insert',
                                         '/api/inspection/update',
                                         '/api/inspection/delete',

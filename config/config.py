@@ -1,5 +1,5 @@
-namespace = 'KLIMETO'
-#namespace = 'AZO'
+#namespace = 'KLIMETO'
+namespace = 'AZO'
 localhost = True
 development = False
 if namespace == 'KLIMETO':

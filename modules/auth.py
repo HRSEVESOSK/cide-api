@@ -1,9 +1,11 @@
 from flask_restful import Resource
 from flask import request,g,make_response
 from flask_httpauth import HTTPBasicAuth
-import requests,json,urllib
+import requests,json
+from requests.exceptions import ConnectionError
 from config import config as cfg
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Response
 
 
 auth = HTTPBasicAuth()
@@ -28,10 +30,16 @@ class Authentication(Resource):
     def verify_user_pass(self,user,password):
         checkURL = self.authservice + '?user=' + user + '&password=' + password
         print(checkURL)
-        responseData = json.loads(requests.get(checkURL).text)
+        sendRequest = requests.get(checkURL)
+        if sendRequest.status_code != 200:
+            return False
+        else:
+            responseData = json.loads(sendRequest.text)
         if responseData == '401 Unauthorized':
             return False
         else:
-            return responseData['name'],responseData['roles']
+            return responseData['name'], responseData['roles']
+
+
 
 
