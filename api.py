@@ -35,7 +35,10 @@ api.add_resource(inspection.Inspection, '/api/inspection/',
                                         '/api/inspection/specific/score/<hashid>',
                                         '/api/inspection/specific/criterior/score',
                                         '/api/inspection/specific/report/upload')
-api.add_resource(upload.Upload, '/api/inspection/upload', '/api/inspection/specific/upload','/api/inspection/specific/download/<hashid>')
+api.add_resource(upload.Upload, '/api/inspection/upload',
+                                '/api/inspection/specific/upload',
+                                '/api/inspection/specific/download/<hashid>',
+                                '/api/inspection/download/<hashid>')
 
 @app.after_request
 def after_request(response):

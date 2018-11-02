@@ -302,7 +302,8 @@ class Inspection(Resource):
                                                             "a.inspection_date DATE, "
                                                             "concat(b.person_name,' ',b.person_surname) COORDINATOR, "
                                                             "count(c.id_specific_inspection) SICOUNT, "
-                                                            "a.type as CITYPE "
+                                                            "a.type as CITYPE, "
+                                                            "a.final_report as REPORT "
                                                     "FROM cide_coordinated_inspection a "
                                                     "LEFT JOIN cide_person b "
                                                     "ON a.id_user = b.id_person "
@@ -321,6 +322,10 @@ class Inspection(Resource):
                     returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
                     returnData['inspection_coordinator'] = (row['coordinator'])
                     returnData['inspection_type'] = (row['citype'])
+                    if row['report'] is None:
+                        returnData['inspection_report'] = (row['report'])
+                    else:
+                        returnData['inspection_report'] = 1
                     returnData['id'] = (hashids.encode(row['id']))
                     returnData['si_count'] = (row['sicount'])
                     returnDataList.append(returnData)

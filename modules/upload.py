@@ -38,15 +38,22 @@ class Upload(Resource):
 
 
     def get(self,hashid=False):
-        if hashid:
+        if request.path.endswith("/specific/download/" + hashid):
+            inspectionType = 'specific'
             #hashid = 'QABWJxbojagwOL0E'
             self.connection.connect()
             selectReport = self.connection.query("SELECT final_report from cide_specific_inspection where id_specific_inspection=%s" % (hashids.decode(hashid))[0])
             self.connection.close()
-            if selectReport[0][0]:
-                return send_file(io.BytesIO(selectReport[0][0]),mimetype='application/pdf',as_attachment=True,attachment_filename='Report_'+hashid+'.pdf')
-            else:
-                return Response('{"message":"specificic inspection %s has not report in CIDE datatabase"}' % hashid, mimetype='application/json',status=404)
+        if request.path.endswith("/inspection/download/" + hashid):
+            inspectionType = 'coordinated'
+            self.connection.connect()
+            selectReport = self.connection.query("SELECT final_report from cide_coordinated_inspection where id_coordinated_inspection=%s" % (hashids.decode(hashid))[0])
+            self.connection.close()
+        if selectReport[0][0]:
+            return send_file(io.BytesIO(selectReport[0][0]), mimetype='application/pdf', as_attachment=True,attachment_filename='Report_'+inspectionType+'_'+ hashid + '.pdf')
+            #return send_file(io.BytesIO(selectReport[0][0]))
+        else:
+            return Response('{"message":"specificic inspection %s has not report in CIDE datatabase"}' % hashid, mimetype='application/json',status=404)
 
 
     @auth.login_required
@@ -56,31 +63,54 @@ class Upload(Resource):
         hashid = request.form['id']
         print(g.user)
         if request.path.endswith('/inspection/specific/upload'):
-            if file and self.allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                ciReportFolder = os.path.join(UPLOAD_FOLDER,hashid)
-                if not os.path.exists(ciReportFolder):
-                    os.makedirs(ciReportFolder)
-                reportPath = os.path.join(ciReportFolder, filename)
-                file.save(reportPath)
-                ## HERE WE NEED TO UPDATE DATABASE
-                if os.path.isfile(reportPath) and os.path.getsize(reportPath) > 0:
-                    print("Report file {0} sucesfully uploaded. Updating database for CI ID: {1}".format(os.path.join(ciReportFolder, filename),hashid))
-                    iduser = str(idpersonrole[0][0][0])
-                    lastupdate = datetime.datetime.now().strftime('%Y-%m-%d')
-                    # UPDATE METADATA FOR COORDINATED INSPECTION ADDING SPECIFIC INSPECTIONS
-                    reportBlob = open(reportPath, 'rb')
-                    self.connection.connect()
-                    updatecoordinspection = self.connection.query(
-                        "UPDATE cide_specific_inspection SET last_update = '%s', id_user = %s, final_report = %s"
-                        " WHERE id_specific_inspection = %s RETURNING id_specific_inspection" % (lastupdate, iduser, psycopg2.Binary(reportBlob.read()),(hashids.decode(hashid))[0]), False)
-                    self.connection.close()
-                    reportBlob.close()
-                    print updatecoordinspection
-                    if updatecoordinspection:
-                        result = '{"updated":"' + hashids.encode(updatecoordinspection[0][0]) + '"}'
-            else:
-                result = '{"updated": 0}'
+            inspectionType = 'specific'
+        if request.path.endswith('/inspection/upload'):
+            inspectionType = 'coordinated'
+
+        if not self.allowed_file(file.filename):
+            return Response('"message":"file extension forbidden"', mimetype='application/json',status=403)
+
+        if file and self.allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            ciReportFolder = os.path.join(UPLOAD_FOLDER, inspectionType, hashid)
+            if not os.path.exists(ciReportFolder):
+                os.makedirs(ciReportFolder)
+            reportPath = os.path.join(ciReportFolder, filename)
+            file.save(reportPath)
+            ## HERE WE NEED TO UPDATE DATABASE
+            if os.path.isfile(reportPath) and os.path.getsize(reportPath) > 0:
+                print("Report file {0} sucesfully uploaded. Updating database for CI ID: {1}".format(os.path.join(ciReportFolder, filename), hashid))
+                iduser = str(idpersonrole[0][0][0])
+                lastupdate = datetime.datetime.now().strftime('%Y-%m-%d')
+                # UPDATE METADATA FOR COORDINATED INSPECTION ADDING SPECIFIC INSPECTIONS
+                reportBlob = open(reportPath, 'rb')
+                self.connection.connect()
+                updatecoordinspection = self.connection.query(
+                    "UPDATE cide_%s_inspection SET "
+                    "last_update = '%s', "
+                    "id_user = %s, "
+                    "final_report = %s"
+                    " WHERE "
+                    "id_%s_inspection = %s "
+                    "RETURNING id_%s_inspection" % (
+                        inspectionType,
+                        lastupdate,
+                        iduser,
+                        psycopg2.Binary(reportBlob.read()),
+                        inspectionType,
+                        (hashids.decode(hashid))[0],
+                        inspectionType
+                    ), False)
+                self.connection.close()
+                reportBlob.close()
+                print updatecoordinspection
+                if updatecoordinspection:
+                    result = '{"updated":"' + hashids.encode(updatecoordinspection[0][0]) + '"}'
+                    return Response(result, mimetype='application/json')
+        else:
+            result = '{"updated": 0}'
+
+
         return Response(result, mimetype='application/json')
 
         #if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' or 'ROLE_CIDE_SMS' in g.user[1]:
