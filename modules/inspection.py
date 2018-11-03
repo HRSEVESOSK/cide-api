@@ -141,7 +141,7 @@ class Inspection(Resource):
             else:
                 insptype = "type='{}'".format(insptype)
             self.connection.connect()
-            specinstypes = self.connection.query("SELECT des_inspection_type INSTYPE,id_inspection_type ID from cide_specific_inspection_type WHERE %s" % insptype)
+            specinstypes = self.connection.query("SELECT des_inspection_type INSTYPE,id_inspection_type ID from cide_specific_inspection_type WHERE %s ORDER BY des_inspection_type ASC" % insptype)
             print specinstypes
             returnDataList=[]
             for row in specinstypes:
