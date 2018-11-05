@@ -54,12 +54,16 @@ class Inspection(Resource):
             Data returned based on user role. CIDE_ROLE_ADMIN returns all.        
         """
         if request.path.endswith('/specific/criterior'):
+            '''
             self.connection.connect()
             specInspTypes = []
             for type in self.connection.query("SELECT split_part(des_inspection_type, '/', 1) INSTYPE from cide_specific_inspection_type"):
                 specInspTypes.append(type[0])
+            self.connection.close()
+            '''
             #### FOR SAKE OF SIMPLICITY WE TAKE THE FIRST ROLE FROM ROLE LIST
-            if any(ext in g.user[1][0] for ext in specInspTypes):
+            ''' COMMENTED OUT TO PROVIDE LIST TO ANY USER
+            if (ext in g.user[1][0] for ext in specInspTypes):
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
                 self.connection.connect()
                 inspectionTypeId = self.connection.query("SELECT id_inspection_type FROM cide_person_role WHERE id_person_role = %s" % idpersonrole[2][0][0])
@@ -86,8 +90,7 @@ class Inspection(Resource):
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
             elif 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
                 self.connection.connect()
-                critfamid = self.connection.query(
-                    "SELECT id_criterior_family ID, criterior_family FVALUE FROM cide_criterior_family")  ### WHERE SPECIFIC INSPECTION TYPE ID
+                critfamid = self.connection.query("SELECT id_criterior_family ID, criterior_family FVALUE FROM cide_criterior_family")  ### WHERE SPECIFIC INSPECTION TYPE ID
                 returnDataList = []
                 for family in critfamid:
                     families = {}
@@ -107,6 +110,28 @@ class Inspection(Resource):
                     returnDataList.append(families)
                 self.connection.close()
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+            '''
+            self.connection.connect()
+            critfamid = self.connection.query(
+                "SELECT id_criterior_family ID, criterior_family FVALUE FROM cide_criterior_family")  ### WHERE SPECIFIC INSPECTION TYPE ID
+            returnDataList = []
+            for family in critfamid:
+                families = {}
+                families['id'] = hashids.encode(family['id'])
+                families['value'] = family['fvalue']
+                criteriors = self.connection.query("SELECT id_criterior ID, des_criterior CVALUE FROM cide_criterior WHERE id_criterior_family = %s" % family['id'])
+                if criteriors:
+                    criteriums = []
+                    for kriterium in criteriors:
+                        criterium = {}
+                        criterium['id'] = hashids.encode(kriterium['id'])
+                        criterium['value'] = kriterium['cvalue']
+                        criteriums.append(criterium)
+                    families['criteria'] = criteriums
+                returnDataList.append(families)
+            self.connection.close()
+            return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+
         """
            INSERTION SPECIFIC INSPECTION TYPE ONLY FOR ADMIN /api/inspection/specific/type/insert?type=TEST&dismissed=True
         """
