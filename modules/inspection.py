@@ -196,7 +196,19 @@ class Inspection(Resource):
         """
         if hashid and request.path.endswith('/specific/' + hashid):
             print('Endpoint to view specific inspection data')
-            if 'ROLE_CIDE_SMS' in g.user[1] or 'ROLE_CIDE_IED' in g.user[1]:
+            if 'ROLE_CIDE_ENV' in g.user[1] \
+                    or 'ROLE_CIDE_VOD' in g.user[1] \
+                    or 'ROLE_CIDE_EL' in g.user[1] \
+                    or 'ROLE_CIDE_ZP' in g.user[1] \
+                    or 'ROLE_CIDE_IZS' in g.user[1] \
+                    or 'ROLE_CIDE_ZNR' in g.user[1] \
+                    or 'ROLE_CIDE_SAN' in g.user[1] \
+                    or 'ROLE_CIDE_PRI' in g.user[1] \
+                    or 'ROLE_CIDE_VET' in g.user[1] \
+                    or 'ROLE_CIDE_POLJ' in g.user[1] \
+                    or 'ROLE_CIDE_RUD' in g.user[1] \
+                    or 'ROLE_CIDE_OPT' in g.user[1] \
+                    or 'ROLE_CIDE_IGOK' in g.user[1]:
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
                 self.connection.connect()
                 specinspecdata = self.connection.query("SELECT a.id_specific_inspection ID, "
@@ -233,7 +245,7 @@ class Inspection(Resource):
                         returnDataList.append(returnData)
                     self.connection.close()
                     return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
-            elif 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR':
+            elif 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
                 self.connection.connect()
                 print("ID COORD INSP: %s" % (hashids.decode(hashid))[0])
                 specinspecdata = self.connection.query("SELECT a.id_specific_inspection ID, "
