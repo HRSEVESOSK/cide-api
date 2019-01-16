@@ -35,7 +35,7 @@ class Establishment(Resource):
                                  "FROM cide_establishment "
                                  "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
                                  "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
-                                 "WHERE establishment_name LIKE '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID,last_update ORDER BY last_update DESC NULLS LAST" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
+                                 "WHERE establishment_name LIKE '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID ORDER BY max(last_update) DESC NULLS LAST" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
                     connection.connect()
                     data = connection.query(sqlSelect)
                     #data = connection.query(sql=sqlSelect)
@@ -46,7 +46,7 @@ class Establishment(Resource):
                                  "FROM cide_establishment "
                                  "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
                                  "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
-                                 "WHERE oib LIKE '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID,last_update ORDER BY last_update DESC NULLS LAST" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
+                                 "WHERE oib LIKE '%s' GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID ORDER BY max(last_update) DESC NULLS LAST" % ((request.args.get(argument)).encode("utf-8")).replace('*', '%'))
                     connection.connect()
                     data = connection.query(sql=sqlSelect)
                     connection.close()
@@ -59,8 +59,9 @@ class Establishment(Resource):
                          "FROM cide_establishment "
                          "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
                          "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
-                         "GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID,last_update "
-                         "ORDER BY last_update DESC NULLS LAST")
+                         "GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID "
+                         "ORDER BY max(last_update) DESC NULLS LAST")
+            print sqlSelect
             connection.connect()
             data = connection.query(sqlSelect)
             connection.close()
