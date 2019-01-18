@@ -38,8 +38,13 @@ class Inspection(Resource):
             Available for any user role.
         """
         if request.path.endswith('/specific/criterior/score'):
+            language = request.args.get('lang')
+            if not language or language == 'en':
+                des_score_col = 'des_score'
+            else:
+                des_score_col = 'des_score_hrv'
             self.connection.connect()
-            scoredatalist = self.connection.query("SELECT id_score ID, CONCAT(des_score,'-(',score_num::text,')') LIST from cide_score")
+            scoredatalist = self.connection.query("SELECT id_score ID, CONCAT(%s,'-(',score_num::text,')') LIST from cide_score" % des_score_col    )
             self.connection.close()
             returnData=[]
             for value in scoredatalist:
@@ -112,14 +117,20 @@ class Inspection(Resource):
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
             '''
             self.connection.connect()
-            critfamid = self.connection.query(
-                "SELECT id_criterior_family ID, criterior_family FVALUE FROM cide_criterior_family")  ### WHERE SPECIFIC INSPECTION TYPE ID
+            language = request.args.get('lang')
+            if not language or language == 'en':
+                critFamilyCol = 'criterior_family'
+                desCritCol = 'des_criterior'
+            else:
+                critFamilyCol = 'criterior_family_hrv'
+                desCritCol = 'des_criterior_hrv'
+            critfamid = self.connection.query("SELECT id_criterior_family ID, %s FVALUE FROM cide_criterior_family" % critFamilyCol)  ### WHERE SPECIFIC INSPECTION TYPE ID
             returnDataList = []
             for family in critfamid:
                 families = {}
                 families['id'] = hashids.encode(family['id'])
                 families['value'] = family['fvalue']
-                criteriors = self.connection.query("SELECT id_criterior ID, des_criterior CVALUE FROM cide_criterior WHERE id_criterior_family = %s" % family['id'])
+                criteriors = self.connection.query("SELECT id_criterior ID, %s CVALUE FROM cide_criterior WHERE id_criterior_family = %s" % (desCritCol,family['id']))
                 if criteriors:
                     criteriums = []
                     for kriterium in criteriors:
@@ -161,12 +172,17 @@ class Inspection(Resource):
         if not hashid and request.path.endswith("/specific/type"):
             ## GET LIST OF SPEC INSP TYPES
             insptype = request.args.get('type')
+            language = request.args.get('lang')
+            if not language or language == 'en':
+                des_inspection_type = 'des_inspection_type'
+            else:
+                des_inspection_type = 'des_inspection_type_hrv'
             if not insptype or insptype == 'any':
                 insptype = "1=1"
             else:
                 insptype = "type='{}'".format(insptype)
             self.connection.connect()
-            specinstypes = self.connection.query("SELECT des_inspection_type INSTYPE,id_inspection_type ID from cide_specific_inspection_type WHERE %s ORDER BY des_inspection_type ASC" % insptype)
+            specinstypes = self.connection.query("SELECT %s INSTYPE,id_inspection_type ID from cide_specific_inspection_type WHERE %s ORDER BY %s ASC" % (des_inspection_type,insptype,des_inspection_type))
             print specinstypes
             returnDataList=[]
             for row in specinstypes:
@@ -195,6 +211,7 @@ class Inspection(Resource):
             ROLES 
         """
         if hashid and request.path.endswith('/specific/' + hashid):
+            language = request.args.get('lang')
             print('Endpoint to view specific inspection data')
             if 'ROLE_CIDE_ENV' in g.user[1] \
                     or 'ROLE_CIDE_VOD' in g.user[1] \
@@ -210,9 +227,13 @@ class Inspection(Resource):
                     or 'ROLE_CIDE_OPT' in g.user[1] \
                     or 'ROLE_CIDE_IGOK' in g.user[1]:
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
+                if not language or language == 'en':
+                    des_inspection_type = 'des_inspection_type'
+                else:
+                    des_inspection_type = 'des_inspection_type_hrv'
                 self.connection.connect()
                 specinspecdata = self.connection.query("SELECT a.id_specific_inspection ID, "
-                                                       "b.des_inspection_type SPECTYPE, "
+                                                       "b.%s SPECTYPE, "
                                                        "a.specific_inspection_date DATE, "
                                                        "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
                                                        "c.organisation ORGANISATION, "
@@ -223,7 +244,7 @@ class Inspection(Resource):
                                                        "AND a.id_person_role = %s "
                                                        "AND d.id_person_role = a.id_person_role "
                                                        "AND c.id_person = d.id_person "
-                                                       "AND b.id_inspection_type = d.id_inspection_type" % ((hashids.decode(hashid))[0],idpersonrole[2][0][0]))
+                                                       "AND b.id_inspection_type = d.id_inspection_type" % (des_inspection_type,(hashids.decode(hashid))[0],idpersonrole[2][0][0]))
                 self.connection.close()
                 if not specinspecdata:
                     return Response('{"message":"inspector %s has been asigned 0 specific inspections"}' % (hashids.encode(idpersonrole[0][0][0])),mimetype='application/json')
@@ -246,17 +267,22 @@ class Inspection(Resource):
                     self.connection.close()
                     return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
             elif 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
+                if not language or language == 'en':
+                    des_inspection_type = 'des_inspection_type'
+                else:
+                    des_inspection_type = 'des_inspection_type_hrv'
                 self.connection.connect()
                 print("ID COORD INSP: %s" % (hashids.decode(hashid))[0])
                 specinspecdata = self.connection.query("SELECT a.id_specific_inspection ID, "
-                                                       "b.des_inspection_type SPECTYPE, "
+                                                       "b.%s SPECTYPE, "
                                                        "a.specific_inspection_date DATE, "
                                                        "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
                                                        "c.organisation ORGANISATION, "
                                                        "a.final_report REPORT, "
                                                        "a.last_update UPDATED "
                                                        "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
-                                                       "WHERE a.id_coordinated_inspection = %s AND d.id_person_role = a.id_person_role AND c.id_person = d.id_person AND b.id_inspection_type = d.id_inspection_type" % (hashids.decode(hashid))[0])
+                                                       "WHERE a.id_coordinated_inspection = %s AND d.id_person_role = a.id_person_role AND c.id_person = d.id_person AND b.id_inspection_type = d.id_inspection_type" %
+                                                       (des_inspection_type,(hashids.decode(hashid))[0]))
                 self.connection.close()
                 if not specinspecdata:
                     return Response('{"message":"coordinated inspection %s has 0 specific inspections"}' % hashid,mimetype='application/json')

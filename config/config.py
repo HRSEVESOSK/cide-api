@@ -1,4 +1,4 @@
-#namespace = 'KLIMETO'
+namespace = 'KLIMETO'
 namespace = 'AZO'
 localhost = True
 development = False
@@ -27,8 +27,8 @@ if namespace == 'AZO':
         dbname = "BIFISIC"
         dbuser = "bifisic"
         dbpwd = "mypass"
-        tempDataDir = 'data'
-        extensions = 'pdf'
+        tempDataDir = 'data/upload'
+        extensions = ['pdf']
         logsDir = 'logs'
         debug = True
         authapi = 'http://192.168.1.226/bifisic/services/httpbasicauth/auth'
