@@ -11,6 +11,8 @@ from modules import person as personcheck
 auth = HTTPBasicAuth()
 hashids = Hashids(min_length=16)
 class Establishment(Resource):
+    def __init__(self):
+        self.personclass = personcheck.Person()
     @auth.verify_password
     def verify_pw(username, password):
         authenticate = authentication.Authentication()
@@ -18,7 +20,8 @@ class Establishment(Resource):
         print(user)
         if not user:
             return False
-        g.user = user[0]
+        g.user = user
+        #g.user = user[0]
         # CHECK IF USER AND ROLES EXIST IN cide_person and cide_role tables, if not create one if yes return OK
         check = personcheck.Person()
         person = check.checkLoggedUser(user)
@@ -55,12 +58,23 @@ class Establishment(Resource):
                     return Response('{"message":"parameter %s not available"}' % str(argument),mimetype='application/json')
         else:
             #sqlSelect = ("select oib OIB,establishment_name MUN_NAME,city_id MUNIC,concat(street,' ',street_number) ADDR, id ESTABID from cide_establishment GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID")
-            sqlSelect = ("select oib OIB,establishment_name MUN_NAME,naziv MUNIC,concat(street,' ',street_number) ADDR,cide_establishment.id ESTABID,count(id_coordinated_inspection) CICOUNT, company_name FIRMA "
-                         "FROM cide_establishment "
-                         "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
-                         "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
-                         "GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID "
-                         "ORDER BY max(last_update) DESC NULLS LAST")
+            if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
+                sqlSelect = ("select oib OIB,establishment_name MUN_NAME,naziv MUNIC,concat(street,' ',street_number) ADDR,cide_establishment.id ESTABID,count(id_coordinated_inspection) CICOUNT, company_name FIRMA "
+                             "FROM cide_establishment "
+                             "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
+                             "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
+                             "GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID "
+                             "ORDER BY max(last_update) DESC NULLS LAST")
+            else:
+                idpersonrole = self.personclass.getPersonRoleId(g.user)
+                sqlSelect = ("select oib OIB,establishment_name MUN_NAME,naziv MUNIC,concat(street,' ',street_number) ADDR,cide_establishment.id ESTABID,count(cide_coordinated_inspection.id_coordinated_inspection) CICOUNT, company_name FIRMA "
+                             "FROM cide_establishment "
+                             "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
+                             "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
+                             "LEFT JOIN cide_specific_inspection ON cide_coordinated_inspection.id_coordinated_inspection = cide_specific_inspection.id_coordinated_inspection "
+                             "WHERE cide_specific_inspection.id_person_role = %s "
+                             "GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID "
+                             "ORDER BY max(cide_coordinated_inspection.last_update) DESC NULLS LAST" % idpersonrole[2][0][0])
             print sqlSelect
             connection.connect()
             data = connection.query(sqlSelect)
@@ -79,24 +93,3 @@ class Establishment(Resource):
                 returnData['establishment_operator'] = row['firma']
                 returnDataList.append(returnData)
             return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
-
-        '''    
-            sendQuery = SQL.selectQuery(table='cide_establishment',where=)
-            print(argument)
-            query.append({argument:request.args.get(argument)})
-            subquery = ("%s LIKE '%s' AND " % (argument,request.args.get(argument)))
-            where.append(subquery)
-        input_dict = json.load(open('data/establishments.json'))
-        sql_where = ''.join(where).rstrip(" AND ")
-        if query:
-            if "name" in ''.join(map(str,query)) and "oib" not in ''.join(map(str,query)):
-                output_dict = [x for x in input_dict if query[0]['name'] in x['name']]
-            elif "oib" in ''.join(map(str,query)) and "name" not in ''.join(map(str,query)):
-                output_dict = [x for x in input_dict if str(query[0]['oib']) in str(x['oib'])]
-            elif "oib" in ''.join(map(str,query)) and "name" in ''.join(map(str,query)):
-                output_dict = [x for x in input_dict if str(query[1]['oib']) in str(x['oib']) and query[0]['name'] in x['name']]
-        else:
-            output_dict = input_dict
-        return Response(json.dumps(output_dict), mimetype='application/json')
-        #return Response(open('data/establishments.json'), mimetype='application/json')
-        '''
