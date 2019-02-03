@@ -279,9 +279,21 @@ class Inspection(Resource):
                                                        "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
                                                        "c.organisation ORGANISATION, "
                                                        "a.final_report REPORT, "
-                                                       "a.last_update UPDATED "
-                                                       "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
-                                                       "WHERE a.id_coordinated_inspection = %s AND d.id_person_role = a.id_person_role AND c.id_person = d.id_person AND b.id_inspection_type = d.id_inspection_type" %
+                                                       "a.last_update UPDATED, "
+                                                       "count(e.id_specific_inspection) COUNTCRIT, "
+                                                       "count(f.id_specific_inspection) COUNTISSUE "
+                                                       "FROM cide_specific_inspection a "
+                                                       "LEFT JOIN cide_person_role d on d.id_person_role = a.id_person_role "
+                                                       "LEFT JOIN cide_person c on c.id_person = d.id_person "
+                                                       "LEFT JOIN cide_specific_inspection_type b on b.id_inspection_type = d.id_inspection_type "
+                                                       "LEFT JOIN cide_specific_insp_criteria e on e.id_specific_inspection = a.id_specific_inspection "
+                                                       "LEFT JOIN cide_open_issue f on f.id_specific_inspection = a.id_specific_inspection "
+                                                       "WHERE a.id_coordinated_inspection = %s "
+                                                       "AND d.id_person_role = a.id_person_role "
+                                                       "AND c.id_person = d.id_person "
+                                                       "AND b.id_inspection_type = d.id_inspection_type "
+                                                       "GROUP BY ID, SPECTYPE, DATE, INSPECTOR, ORGANISATION, REPORT "
+                                                       "ORDER BY  max(a.last_update) DESC NULLS LAST" %
                                                        (des_inspection_type,(hashids.decode(hashid))[0]))
                 self.connection.close()
                 if not specinspecdata:
@@ -301,6 +313,8 @@ class Inspection(Resource):
                             returnData['spec_inspection_report'] = 1
                         returnData['id'] = (hashids.encode(row['id']))
                         returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
+                        returnData['issues_count'] = (row['countissue'])
+                        returnData['crit_count'] = (row['countcrit'])
                         returnDataList.append(returnData)
                     self.connection.close()
                     return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
@@ -360,22 +374,42 @@ class Inspection(Resource):
                     ROLES  
                 """
         if hashid and request.path.endswith('/' + hashid):
-            self.connection.connect()
-            coordinspedata = self.connection.query("SELECT   a.id_coordinated_inspection ID, "
-                                                            "a.inspection_date DATE, "
-                                                            "concat(b.person_name,' ',b.person_surname) COORDINATOR, "
-                                                            "count(c.id_specific_inspection) SICOUNT, "
-                                                            "a.type as CITYPE, "
-                                                            "a.final_report as REPORT "
-                                                    "FROM cide_coordinated_inspection a "
-                                                    "LEFT JOIN cide_person b "
-                                                    "ON a.id_user = b.id_person "
-                                                    "LEFT JOIN cide_specific_inspection c "
-                                                    "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
-                                                    "WHERE a.id_establishment = %s "
-                                                    "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname ORDER BY a.last_update DESC" %  (hashids.decode(hashid))[0])
-            if not coordinspedata:
+            if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
+                self.connection.connect()
+                coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID, "
+                                                                "a.inspection_date DATE, "
+                                                                "concat(b.person_name,' ',b.person_surname) COORDINATOR, "
+                                                                "count(c.id_specific_inspection) SICOUNT, "
+                                                                "a.type as CITYPE, "
+                                                                "a.final_report as REPORT "
+                                                        "FROM cide_coordinated_inspection a "
+                                                        "LEFT JOIN cide_person b "
+                                                        "ON a.id_user = b.id_person "
+                                                        "LEFT JOIN cide_specific_inspection c "
+                                                        "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
+                                                        "WHERE a.id_establishment = %s "
+                                                        "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname ORDER BY max(c.last_update) DESC NULLS LAST" %  (hashids.decode(hashid))[0])
                 self.connection.close()
+            else:
+                idpersonrole = self.personclass.getPersonRoleId(g.user)
+                self.connection.connect()
+                coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID, "
+                                                       "a.inspection_date DATE, "
+                                                       "concat(b.person_name,' ',b.person_surname) COORDINATOR, "
+                                                       "count(c.id_specific_inspection) SICOUNT, "
+                                                       "a.type as CITYPE, "
+                                                       "a.final_report as REPORT "
+                                                       "FROM cide_coordinated_inspection a "
+                                                       "LEFT JOIN cide_person b "
+                                                       "ON a.id_user = b.id_person "
+                                                       "LEFT JOIN cide_specific_inspection c "
+                                                       "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
+                                                       "WHERE a.id_establishment = %s "
+                                                       "AND c.id_person_role = %s "
+                                                       "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname ORDER BY max(c.last_update) DESC NULLS LAST" %
+                                                       ((hashids.decode(hashid))[0],idpersonrole[2][0][0]))
+                self.connection.close()
+            if not coordinspedata:
                 return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid, mimetype='application/json')
             else:
                 returnDataList = []
@@ -477,6 +511,7 @@ class Inspection(Resource):
                         insertCriteriumForSi = self.connection.query("INSERT INTO cide_specific_insp_criteria (id_specific_inspection, id_criterior, id_score, comments, id_user, last_update) VALUES "
                                                                                 "(%s, %s, %s, '%s', %s, '%s') RETURNING id_specific_inspection" % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0],
                                                                                                                  hashids.decode(criteria['id_score'])[0], criteria['comments'],idpersonrole[0][0][0],lastupdate), False)
+
                         if insertCriteriumForSi:
                             inserted = inserted + 1
                     else:
@@ -488,7 +523,12 @@ class Inspection(Resource):
                         if updateCriteriumForCi:
                             updated = updated + 1
                     self.connection.close()
-                    result = '{"inserted":'+str(inserted)+',"updated":'+str(updated)+'}'
+                if inserted > 0 or updated > 0:
+                    self.connection.connect()
+                    updateSIUpdateDate=self.connection.query("UPDATE cide_specific_inspection SET last_update='%s' WHERE id_specific_inspection=%s RETURNING id_specific_inspection" % (lastupdate,hashids.decode(criteria['id_specific_inspection'])[0]), False)
+                    if updateSIUpdateDate:
+                        print("SPecific inspection id '%s' sucessfully updated." % updateSIUpdateDate[0][0])
+                result = '{"inserted":'+str(inserted)+',"updated":'+str(updated)+'}'
             #### INSERT ISSUES ####
             if request.path.endswith("/specific/issue/insert"):
                 inserted = 0
