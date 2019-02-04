@@ -507,18 +507,18 @@ class Inspection(Resource):
                                                                    % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0]))
                     if not id_specific_inspection:
                         #INSERTING
-                        print("Inserting score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],criteria['comments'],hashids.decode(criteria['id_specific_inspection'])[0]))
+                        print("Inserting score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],(criteria['comments']).encode("utf-8"),hashids.decode(criteria['id_specific_inspection'])[0]))
                         insertCriteriumForSi = self.connection.query("INSERT INTO cide_specific_insp_criteria (id_specific_inspection, id_criterior, id_score, comments, id_user, last_update) VALUES "
                                                                                 "(%s, %s, %s, '%s', %s, '%s') RETURNING id_specific_inspection" % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0],
-                                                                                                                 hashids.decode(criteria['id_score'])[0], criteria['comments'],idpersonrole[0][0][0],lastupdate), False)
+                                                                                                                 hashids.decode(criteria['id_score'])[0], (criteria['comments']).encode("utf-8"),idpersonrole[0][0][0],lastupdate), False)
 
                         if insertCriteriumForSi:
                             inserted = inserted + 1
                     else:
-                        print("Updating score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],criteria['comments'],id_specific_inspection[0][0]))
+                        print("Updating score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],(criteria['comments']).encode("utf-8"),id_specific_inspection[0][0]))
                         updateCriteriumForCi = self.connection.query("UPDATE cide_specific_insp_criteria SET"
                                                                      "  id_score=%s, comments='%s', id_user=%s, last_update = '%s' "
-                                                                     "WHERE id_specific_inspection=%s AND id_criterior=%s RETURNING id_specific_inspection" % (hashids.decode(criteria['id_score'])[0],criteria['comments'],idpersonrole[0][0][0],
+                                                                     "WHERE id_specific_inspection=%s AND id_criterior=%s RETURNING id_specific_inspection" % (hashids.decode(criteria['id_score'])[0],(criteria['comments']).encode("utf-8"),idpersonrole[0][0][0],
                                                                                                                               lastupdate,id_specific_inspection[0][0],hashids.decode(criteria['id_criterior'])[0]), False)
                         if updateCriteriumForCi:
                             updated = updated + 1
@@ -551,27 +551,30 @@ class Inspection(Resource):
                         updateIssue = self.connection.query("UPDATE cide_open_issue SET "
                                                             "id_specific_inspection=%s, des_open_issue='%s', acc_prescriptions=%s, deadline_warning='%s', acc_warning=%s, des_indictment='%s', id_user=%s, last_update='%s' "
                                                             "WHERE id_open_issue=%s RETURNING id_open_issue" % (hashids.decode(issue['id_specific_inspection'])[0],
-                                                                            issue['issue_description'],
-                                                                            issue['acc_prescriptions'],
-                                                                            issue['deadline_warning'],
-                                                                            issue['acc_warning'],
-                                                                            issue['des_indictment'],
-                                                                            idpersonrole[0][0][0],
-                                                                            lastupdate,hashids.decode(issue['id'])[0]), False)
+                                                                                                                (issue['issue_description']).encode("utf-8"),
+                                                                                                                issue['acc_prescriptions'],
+                                                                                                                issue['deadline_warning'],
+                                                                                                                issue['acc_warning'],
+                                                                                                                (issue['des_indictment']).encode("utf-8"),
+                                                                                                                idpersonrole[0][0][0],
+                                                                                                                lastupdate,
+                                                                                                                hashids.decode(issue['id'])[0]), False)
                         self.connection.close()
                         if updateIssue:
                             updated = updated + 1
                     else:
                         self.connection.connect()
                         insertIssue = self.connection.query("INSERT INTO cide_open_issue (id_specific_inspection, des_open_issue, acc_prescriptions, deadline_warning, acc_warning, des_indictment, id_user, last_update) VALUES "
-                                                                                 "(%s,'%s',%s,'%s',%s,'%s',%s,'%s') RETURNING id_open_issue" % (hashids.decode(issue['id_specific_inspection'])[0],
-                                                                                issue['issue_description'],
-                                                                                issue['acc_prescriptions'],
-                                                                                issue['deadline_warning'],
-                                                                                issue['acc_warning'],
-                                                                                issue['des_indictment'],
-                                                                                idpersonrole[0][0][0],
-                                                                                lastupdate), False)
+                                                                                 "(%s,'%s',%s,'%s',%s,'%s',%s,'%s') RETURNING id_open_issue" %
+                                                            (hashids.decode(issue['id_specific_inspection'])[0],
+                                                            (issue['issue_description']).encode("utf-8"),
+                                                            issue['acc_prescriptions'],
+                                                            issue['deadline_warning'],
+                                                            issue['acc_warning'],
+                                                            (issue['des_indictment']).encode("utf-8"),
+                                                            idpersonrole[0][0][0],
+                                                            lastupdate.encode("utf-8")),
+                                                            False)
                         self.connection.close()
                         if insertIssue:
                             currentIssues.append(insertIssue[0][0])
