@@ -428,7 +428,6 @@ class Inspection(Resource):
                     returnDataList.append(returnData)
                 self.connection.close()
                 return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
-
     @auth.login_required
     def post(self):
         specInspTypes = []
@@ -536,12 +535,15 @@ class Inspection(Resource):
                 deleted = 0
                 currentIssues = []
                 for issue in requestData:
+                    print str(issue['issue_description'].encode('utf-8'))
                     if 'issue_description' not in issue:
                         issue['issue_description'] = ''
                     if 'acc_warning' not in issue:
                         issue['acc_warning'] = ''
                     if 'des_indictment' not in issue:
                         issue['des_indictment'] = ''
+                    else:
+                        issue['des_indictment'] = (issue['des_indictment']).encode("utf-8")
                     if 'acc_prescriptions' not in issue:
                         issue['acc_prescriptions'] = ''
                     if "id" in issue:
@@ -551,14 +553,15 @@ class Inspection(Resource):
                         updateIssue = self.connection.query("UPDATE cide_open_issue SET "
                                                             "id_specific_inspection=%s, des_open_issue='%s', acc_prescriptions=%s, deadline_warning='%s', acc_warning=%s, des_indictment='%s', id_user=%s, last_update='%s' "
                                                             "WHERE id_open_issue=%s RETURNING id_open_issue" % (hashids.decode(issue['id_specific_inspection'])[0],
-                                                                                                                (issue['issue_description']).encode("utf-8"),
+                                                                                                                (issue['issue_description']).encode('utf-8'),
                                                                                                                 issue['acc_prescriptions'],
                                                                                                                 issue['deadline_warning'],
                                                                                                                 issue['acc_warning'],
                                                                                                                 (issue['des_indictment']).encode("utf-8"),
                                                                                                                 idpersonrole[0][0][0],
                                                                                                                 lastupdate,
-                                                                                                                hashids.decode(issue['id'])[0]), False)
+                                                                                                                hashids.decode(issue['id'])[0])
+                                                                                                                ,False)
                         self.connection.close()
                         if updateIssue:
                             updated = updated + 1
@@ -573,7 +576,7 @@ class Inspection(Resource):
                                                             issue['acc_warning'],
                                                             (issue['des_indictment']).encode("utf-8"),
                                                             idpersonrole[0][0][0],
-                                                            lastupdate.encode("utf-8")),
+                                                            lastupdate),
                                                             False)
                         self.connection.close()
                         if insertIssue:

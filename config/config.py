@@ -2,6 +2,7 @@ namespace = 'KLIMETO'
 namespace = 'AZO'
 localhost = True
 development = False
+siroles = []
 if namespace == 'KLIMETO':
     authapi = 'http://pproo.azo.hr/bifisic/services/httpbasicauth/auth'
     if localhost:
@@ -17,6 +18,20 @@ if namespace == 'KLIMETO':
         extensions = ['pdf', 'doc', 'docx']
         logsDir = 'data\logs'
         debug = True
+    elif development:
+        host = '192.168.1.77'
+        appport = '80'
+        apiport = '8080'
+        dbhost = "192.168.1.226"
+        dbport = "5432"
+        dbname = "BIFISIC"
+        dbuser = "bifisic"
+        dbpwd = "mypass"
+        tempDataDir = 'data\upload'
+        extensions = ['pdf', 'doc', 'docx']
+        logsDir = 'logs'
+        debug = True
+        authapi = 'http://192.168.1.226/bifisic/services/httpbasicauth/auth'
 if namespace == 'AZO':
     if localhost:
         host = 'localhost'

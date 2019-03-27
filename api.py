@@ -8,9 +8,11 @@ from modules import auth
 from modules import establishment
 from modules import inspection
 from modules import upload
+from modules import user
 from config import config as cfg
 from flask_cors import CORS
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
 api = Api(app)
 CORS(app)
 #cors = CORS(api, resources={r"/api/*": {"origins": "*"}})
@@ -18,7 +20,7 @@ CORS(app)
 api.add_resource(capabilities.Capabilities, '/api')
 api.add_resource(auth.Authentication, '/login', '/logout')
 api.add_resource(establishment.Establishment, '/api/establishment')
-api.add_resource(inspection.Inspection, '/api/inspection/',
+api.add_resource(inspection.Inspection, '/api/inspection',
                                         '/api/inspection/<hashid>',
                                         '/api/inspection/type',
                                         '/api/inspection/insert',
@@ -39,6 +41,7 @@ api.add_resource(upload.Upload, '/api/inspection/upload',
                                 '/api/inspection/specific/upload',
                                 '/api/inspection/specific/download/<hashid>',
                                 '/api/inspection/download/<hashid>')
+api.add_resource(user.User, '/api/user','/api/user/update','/api/user/delete')
 
 @app.after_request
 def after_request(response):
