@@ -228,7 +228,7 @@ class Inspection(Resource):
                     or 'ROLE_CIDE_OPT' in g.user[1] \
                     or 'ROLE_CIDE_IGOK' in g.user[1]:
             '''
-            if g.user[1] in cfg.siroles:
+            if set(g.user[1]).issubset(cfg.siroles):
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
                 if not language or language == 'en':
                     des_inspection_type = 'des_inspection_type'
