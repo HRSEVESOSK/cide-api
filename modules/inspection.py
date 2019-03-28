@@ -213,11 +213,12 @@ class Inspection(Resource):
         if hashid and request.path.endswith('/specific/' + hashid):
             language = request.args.get('lang')
             print('Endpoint to view specific inspection data')
+            '''
             if 'ROLE_CIDE_ENV' in g.user[1] \
                     or 'ROLE_CIDE_VOD' in g.user[1] \
                     or 'ROLE_CIDE_EL' in g.user[1] \
                     or 'ROLE_CIDE_ZP' in g.user[1] \
-                    or 'ROLE_CIDE_IZS' in g.user[1] \
+                    or 'ROLE_CIDE_ICZ' in g.user[1] \
                     or 'ROLE_CIDE_ZNR' in g.user[1] \
                     or 'ROLE_CIDE_SAN' in g.user[1] \
                     or 'ROLE_CIDE_PRI' in g.user[1] \
@@ -226,6 +227,8 @@ class Inspection(Resource):
                     or 'ROLE_CIDE_RUD' in g.user[1] \
                     or 'ROLE_CIDE_OPT' in g.user[1] \
                     or 'ROLE_CIDE_IGOK' in g.user[1]:
+            '''
+            if g.user[1] in cfg.siroles:
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
                 if not language or language == 'en':
                     des_inspection_type = 'des_inspection_type'
@@ -488,7 +491,7 @@ class Inspection(Resource):
                     updatecoordinspection = self.connection.query("UPDATE cide_coordinated_inspection SET last_update = '%s', id_user = '%s' WHERE id_coordinated_inspection = %s" % (lastupdate,iduser,(hashids.decode(hashid))[0]), False)
                     self.connection.close()
                     if updatecoordinspection:
-                        result = '{"inserted":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
+                        result = '{"updated":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
         elif any(ext in g.user[1][0] for ext in specInspTypes):
             #### INSERT OR UDPATE CITERIA SCORING #####
             if request.path.endswith("/specific/criterior/insert"):

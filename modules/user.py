@@ -65,8 +65,20 @@ class User(Resource):
     def post(self):
         if 'ROLE_CIDE_ADMIN' in g.user[1]:
             postData = request.json
-            uId = hashids.decode(postData['id'])
-            uName = (postData['person_name']).encode('utf-8')
+            uId=(hashids.decode(postData['id']))[0]
+            uName=postData['person_name'].encode('utf-8')
             uSurname=postData['person_surnname'].encode('utf-8')
-            uEmail=postData['email'].encode('utf-8')
-            print(uId, uName,uSurname,uEmail.decode('utf-8'))
+            uEmail=postData['person_email'].encode('utf-8')
+            print("USER OID: {}".format(uId))
+            print("USER NAME: {}".format(uName))
+            print("USER SURNNAME: {}".format(uSurname))
+            print("USER EMAIL: {}".format(uEmail))
+            self.connection.connect()
+            updateCidePerson = self.connection.query("UPDATE cide_person SET person_name='%s', person_surname='%s', email='%s' WHERE id_person=%s RETURNING id_person" % (uName,uSurname,uEmail,uId),False)
+            self.connection.close()
+            if updateCidePerson:
+                result = '{"updated":"' + hashids.encode(updateCidePerson[0][0]) + '"}'
+            else:
+                result = '{"updated":"0"}'
+            return Response(result)
+

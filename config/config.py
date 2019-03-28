@@ -2,7 +2,23 @@ namespace = 'KLIMETO'
 namespace = 'AZO'
 localhost = True
 development = False
-siroles = []
+siroles = ['ROLE_CIDE_EL',
+           'ROLE_CIDE_ENV',
+           'ROLE_CIDE_EONTO',
+           'ROLE_CIDE_ICZ',
+           'ROLE_CIDE_IED',
+           'ROLE_CIDE_IGOK',
+           'ROLE_CIDE_IZS',
+           'ROLE_CIDE_OPT',
+           'ROLE_CIDE_POLJ',
+           'ROLE_CIDE_PRI',
+           'ROLE_CIDE_RUD',
+           'ROLE_CIDE_SAN',
+           'ROLE_CIDE_STO',
+           'ROLE_CIDE_VET',
+           'ROLE_CIDE_VOD',
+           'ROLE_CIDE_ZNR',
+           'ROLE_CIDE_ZP']
 if namespace == 'KLIMETO':
     authapi = 'http://pproo.azo.hr/bifisic/services/httpbasicauth/auth'
     if localhost:
