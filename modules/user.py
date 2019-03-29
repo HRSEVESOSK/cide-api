@@ -31,9 +31,10 @@ class User(Resource):
         person = check.checkLoggedUser(user)
         print("CHECK LOGGED USER STATUS: %s" % person)
         return True
+
     @auth.login_required
     def get(self):
-        if 'ROLE_CIDE_ADMIN' in g.user[1]:
+        if 'ROLE_CIDE_ADMIN' in g.user[1] and request.path.endswith('user'):
             self.connection.connect()
             sqlSelect = 'SELECT cide_person.id_person,' \
                         'cide_person.person_name,' \
@@ -81,4 +82,3 @@ class User(Resource):
             else:
                 result = '{"updated":"0"}'
             return Response(result)
-

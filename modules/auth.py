@@ -30,7 +30,7 @@ class Authentication(Resource):
     def verify_user_pass(self,user,password):
         checkURL = self.authservice + '?user=' + user + '&password=' + password
         print(checkURL)
-        sendRequest = requests.get(checkURL)
+        sendRequest = requests.get(checkURL,verify=False)
         if sendRequest.status_code != 200:
             return False
         else:
