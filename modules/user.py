@@ -7,6 +7,7 @@ from flask import g,Response,request,jsonify
 from modules import person as personcheck
 from modules import auth as authentication
 import json
+from config import config as cfg
 auth = HTTPBasicAuth()
 hashids = Hashids(min_length=16)
 import sys
@@ -60,11 +61,39 @@ class User(Resource):
                     returnData['person_role'] = (row['gs_role'])
                     returnDataList.append(returnData)
                 return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+        elif 'ROLE_CIDE_COORDINATOR' in g.user[1] or set(g.user[1]).issubset(cfg.siroles):
+            self.connection.connect()
+            sqlSelect = "SELECT cide_person.id_person," \
+                        "cide_person.person_name," \
+                        "cide_person.person_surname," \
+                        "cide_person.gs_username," \
+                        "cide_person.email," \
+                        "cide_role.gs_role " \
+                        "from cide_person " \
+                        "JOIN cide_person_role ON cide_person.id_person = cide_person_role.id_person " \
+                        "JOIN cide_role ON cide_person_role.id_role = cide_role.id_role "\
+                        "WHERE cide_person.gs_username = '%s' " \
+                        "AND cide_role.gs_role = '%s'" % (g.user[0],g.user[1][0])
+            data = self.connection.query(sqlSelect)
+            self.connection.close()
+            if data:
+                returnDataList = []
+                # returnDataList.append({"count": connection.numresult})
+                for row in data:
+                    returnData = {}
+                    returnData['id'] = (hashids.encode(row['id_person']))
+                    returnData['person_name'] = (row['person_name'])
+                    returnData['person_surnname'] = (row['person_surname'])
+                    returnData['person_email'] = (row['email'])
+                    returnData['person_username'] = (row['gs_username'])
+                    returnData['person_role'] = (row['gs_role'])
+                    returnDataList.append(returnData)
+                return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
         else:
             return Response('Unauthorized',401)
     @auth.login_required
     def post(self):
-        if 'ROLE_CIDE_ADMIN' in g.user[1]:
+        if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1] or set(g.user[1]).issubset(cfg.siroles):
             postData = request.json
             uId=(hashids.decode(postData['id']))[0]
             uName=postData['person_name'].encode('utf-8')
@@ -82,3 +111,5 @@ class User(Resource):
             else:
                 result = '{"updated":"0"}'
             return Response(result)
+        else:
+            return Response('Unauthorized', 401)
