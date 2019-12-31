@@ -228,8 +228,12 @@ class Inspection(Resource):
                     or 'ROLE_CIDE_OPT' in g.user[1] \
                     or 'ROLE_CIDE_IGOK' in g.user[1]:
             '''
-            if set(g.user[1]).issubset(cfg.siroles):
+            if set(g.user[1]).issubset(cfg.siroles): 
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
+                id_inspection_type_select = "select id_inspection_type from cide_person_role where id_person_role = %s" % idpersonrole[2][0][0]
+                self.connection.connect()
+                id_inspection_type = self.connection.query(id_inspection_type_select)
+                self.connection.close()
                 if not language or language == 'en':
                     des_inspection_type = 'des_inspection_type'
                 else:
@@ -244,10 +248,10 @@ class Inspection(Resource):
                                                        "a.last_update UPDATED "
                                                        "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
                                                        "WHERE a.id_coordinated_inspection = %s "
-                                                       "AND a.id_person_role = %s "
+                                                       "AND a.id_person_role in (select id_person_role from cide_person_role where id_inspection_type = %s ) "
                                                        "AND d.id_person_role = a.id_person_role "
                                                        "AND c.id_person = d.id_person "
-                                                       "AND b.id_inspection_type = d.id_inspection_type" % (des_inspection_type,(hashids.decode(hashid))[0],idpersonrole[2][0][0]))
+                                                       "AND b.id_inspection_type = d.id_inspection_type" % (des_inspection_type,(hashids.decode(hashid))[0],id_inspection_type[0][0]))
                 self.connection.close()
                 if not specinspecdata:
                     return Response('{"message":"inspector %s has been asigned 0 specific inspections"}' % (hashids.encode(idpersonrole[0][0][0])),mimetype='application/json')
@@ -395,6 +399,10 @@ class Inspection(Resource):
                 self.connection.close()
             else:
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
+                id_inspection_type_select = "select id_inspection_type from cide_person_role where id_person_role = %s" % idpersonrole[2][0][0]
+                self.connection.connect()
+                id_inspection_type = self.connection.query(id_inspection_type_select)
+                self.connection.close()
                 self.connection.connect()
                 coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID, "
                                                        "a.inspection_date DATE, "
@@ -408,9 +416,9 @@ class Inspection(Resource):
                                                        "LEFT JOIN cide_specific_inspection c "
                                                        "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
                                                        "WHERE a.id_establishment = %s "
-                                                       "AND c.id_person_role = %s "
+                                                       "AND c.id_person_role in (select id_person_role from cide_person_role where id_inspection_type = %s) "
                                                        "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname ORDER BY max(c.last_update) DESC NULLS LAST" %
-                                                       ((hashids.decode(hashid))[0],idpersonrole[2][0][0]))
+                                                       ((hashids.decode(hashid))[0],id_inspection_type[0][0]))
                 self.connection.close()
             if not coordinspedata:
                 return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid, mimetype='application/json')
@@ -431,6 +439,7 @@ class Inspection(Resource):
                     returnDataList.append(returnData)
                 self.connection.close()
                 return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
+
     @auth.login_required
     def post(self):
         specInspTypes = []
@@ -491,7 +500,7 @@ class Inspection(Resource):
                     updatecoordinspection = self.connection.query("UPDATE cide_coordinated_inspection SET last_update = '%s', id_user = '%s' WHERE id_coordinated_inspection = %s" % (lastupdate,iduser,(hashids.decode(hashid))[0]), False)
                     self.connection.close()
                     if updatecoordinspection:
-                        result = '{"updated":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
+                        result = '{"inserted":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
         elif any(ext in g.user[1][0] for ext in specInspTypes):
             #### INSERT OR UDPATE CITERIA SCORING #####
             if request.path.endswith("/specific/criterior/insert"):
@@ -538,15 +547,12 @@ class Inspection(Resource):
                 deleted = 0
                 currentIssues = []
                 for issue in requestData:
-                    print str(issue['issue_description'].encode('utf-8'))
                     if 'issue_description' not in issue:
                         issue['issue_description'] = ''
                     if 'acc_warning' not in issue:
                         issue['acc_warning'] = ''
                     if 'des_indictment' not in issue:
                         issue['des_indictment'] = ''
-                    else:
-                        issue['des_indictment'] = (issue['des_indictment']).encode("utf-8")
                     if 'acc_prescriptions' not in issue:
                         issue['acc_prescriptions'] = ''
                     if "id" in issue:
@@ -556,15 +562,14 @@ class Inspection(Resource):
                         updateIssue = self.connection.query("UPDATE cide_open_issue SET "
                                                             "id_specific_inspection=%s, des_open_issue='%s', acc_prescriptions=%s, deadline_warning='%s', acc_warning=%s, des_indictment='%s', id_user=%s, last_update='%s' "
                                                             "WHERE id_open_issue=%s RETURNING id_open_issue" % (hashids.decode(issue['id_specific_inspection'])[0],
-                                                                                                                (issue['issue_description']).encode('utf-8'),
+                                                                                                                (issue['issue_description']).encode("utf-8"),
                                                                                                                 issue['acc_prescriptions'],
                                                                                                                 issue['deadline_warning'],
                                                                                                                 issue['acc_warning'],
                                                                                                                 (issue['des_indictment']).encode("utf-8"),
                                                                                                                 idpersonrole[0][0][0],
                                                                                                                 lastupdate,
-                                                                                                                hashids.decode(issue['id'])[0])
-                                                                                                                ,False)
+                                                                                                                hashids.decode(issue['id'])[0]), False)
                         self.connection.close()
                         if updateIssue:
                             updated = updated + 1
@@ -579,7 +584,7 @@ class Inspection(Resource):
                                                             issue['acc_warning'],
                                                             (issue['des_indictment']).encode("utf-8"),
                                                             idpersonrole[0][0][0],
-                                                            lastupdate),
+                                                            lastupdate.encode("utf-8")),
                                                             False)
                         self.connection.close()
                         if insertIssue:
