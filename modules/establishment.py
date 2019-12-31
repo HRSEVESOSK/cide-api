@@ -67,14 +67,18 @@ class Establishment(Resource):
                              "ORDER BY max(last_update) DESC NULLS LAST")
             else:
                 idpersonrole = self.personclass.getPersonRoleId(g.user)
+                id_inspection_type_select = "select id_inspection_type from cide_person_role where id_person_role = %s" % idpersonrole[2][0][0]
+                connection.connect()
+                id_inspection_type = connection.query(id_inspection_type_select)
+                connection.close()
                 sqlSelect = ("select oib OIB,establishment_name MUN_NAME,naziv MUNIC,concat(street,' ',street_number) ADDR,cide_establishment.id ESTABID,count(cide_coordinated_inspection.id_coordinated_inspection) CICOUNT, company_name FIRMA "
                              "FROM cide_establishment "
                              "LEFT JOIN cide_coordinated_inspection ON cide_coordinated_inspection.id_establishment = cide_establishment.id "
                              "LEFT JOIN rpot_postanskiured ON rpot_postanskiured.id = cide_establishment.city_id "
                              "LEFT JOIN cide_specific_inspection ON cide_coordinated_inspection.id_coordinated_inspection = cide_specific_inspection.id_coordinated_inspection "
-                             "WHERE cide_specific_inspection.id_person_role = %s "
+                             "WHERE cide_specific_inspection.id_person_role in (select id_person_role from cide_person_role where id_inspection_type = %s ) "
                              "GROUP BY OIB,MUN_NAME,MUNIC,ADDR,ESTABID "
-                             "ORDER BY max(cide_coordinated_inspection.last_update) DESC NULLS LAST" % idpersonrole[2][0][0])
+                             "ORDER BY max(cide_coordinated_inspection.last_update) DESC NULLS LAST" % id_inspection_type[0][0])
             print sqlSelect
             connection.connect()
             data = connection.query(sqlSelect)
