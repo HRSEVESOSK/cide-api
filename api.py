@@ -7,7 +7,7 @@ from modules import capabilities
 from modules import auth
 from modules import establishment
 from modules import inspection
-from modules import upload
+from modules import document
 from modules import user
 from modules import public
 from config import config as cfg
@@ -18,9 +18,9 @@ api = Api(app)
 CORS(app)
 #cors = CORS(api, resources={r"/api/*": {"origins": "*"}})
 
-api.add_resource(capabilities.Capabilities, '/api')
-api.add_resource(auth.Authentication, '/login', '/logout')
-api.add_resource(establishment.Establishment, '/api/establishment')
+api.add_resource(capabilities.Capabilities, '/api', endpoint='cide_api_capabilities',methods=['GET'])
+api.add_resource(auth.Authentication, '/login', '/logout', endpoint='cide_api_authentication',methods=['GET'])
+api.add_resource(establishment.Establishment, '/api/establishment', endpoint='cide_api_establishments', methods=['GET'])
 api.add_resource(inspection.Inspection, '/api/inspection',
                                         '/api/inspection/<hashid>',
                                         '/api/inspection/type',
@@ -37,13 +37,13 @@ api.add_resource(inspection.Inspection, '/api/inspection',
                                         '/api/inspection/specific/issue/<hashid>',
                                         '/api/inspection/specific/score/<hashid>',
                                         '/api/inspection/specific/criterior/score',
-                                        '/api/inspection/specific/report/upload')
-api.add_resource(upload.Upload, '/api/inspection/upload',
-                                '/api/inspection/specific/upload',
-                                '/api/inspection/specific/download/<hashid>',
-                                '/api/inspection/download/<hashid>')
-api.add_resource(user.User, '/api/user','/api/user/update','/api/user/delete')
-api.add_resource(public.Public,'/api/public/reset-password')
+                                        '/api/inspection/specific/report/upload',
+                                        endpoint='cide_api_inspections', methods=['GET','POST'])
+api.add_resource(document.UploadDocument, '/api/document/upload', endpoint='cide_api_documents_upload', methods=['POST'])
+api.add_resource(document.DownloadDocument, '/api/document/download', endpoint='cide_api_documents_downloads', methods=['POST'])
+api.add_resource(document.DeleteDocument, '/api/documents/delete', endpoint='cide_api_documents_delete',methods=['DELETE'])
+api.add_resource(user.User, '/api/user','/api/user/update','/api/user/delete', endpoint='cide_api_users',methods=['GET','POST'])
+api.add_resource(public.Public,'/api/public/reset-password', endpoint='cide_api_public', methods=['GET'])
 
 @app.after_request
 def after_request(response):

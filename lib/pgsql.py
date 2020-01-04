@@ -11,8 +11,10 @@ class PGSql:
         self.Err = None
         self.numresult = 0
 
+
     def setDsn(self, dsn):
         self.dsn = dsn
+
 
     def connect(self):
         # type: () -> object
@@ -23,9 +25,11 @@ class PGSql:
             print ("Could not connect to DB \n  %s" % err)
             return False
 
+
     def close(self):
         """ Close DB connection """
         self.conn.close()
+
 
     def query(self, sql, data=False, fetch=True):
         #print("Function query was called")
@@ -39,7 +43,6 @@ class PGSql:
             print ("could not establish cursor on connection \n   %s" % err)
             logging.error("could not establish cursor on connection \n   %s" % err)
             return False
-
         try:
             if data:
                 cur.execute(sql,data)

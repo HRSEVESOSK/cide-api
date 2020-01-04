@@ -33,6 +33,7 @@ if namespace == 'AZO':
         logsDir = 'logs'
         debug = True
         authapi = 'http://192.168.1.226/bifisic/services/httpbasicauth/auth'
+        #authapi = 'https://pproo.azo.hr/bifisic/services/httpbasicauth/auth'
     elif development:
         host = '192.168.1.77'
         appport = '80'
