@@ -27,7 +27,7 @@ class PGSql:
         """ Close DB connection """
         self.conn.close()
 
-    def query(self, sql, fetch=True):
+    def query(self, sql, data=False, fetch=True):
         #print("Function query was called")
         #logging.info("Function query was called")
         print("Function query was called for '%s'" % sql)
@@ -41,8 +41,10 @@ class PGSql:
             return False
 
         try:
-            cur.execute(sql)
-            # print ("SUCCESS executing: %s \n  " % (sql))
+            if data:
+                cur.execute(sql,data)
+            else:
+                cur.execute(sql)
         except StandardError, err:
             print ("ERROR executing SQL query:  %s" % (err))
             logging.error("ERROR executing SQL query:  %s" % (err))
@@ -50,8 +52,6 @@ class PGSql:
 
         if fetch:
             self.numresult = cur.rowcount
-            print("NUMBER OF RESULTS")
-            print self.numresult
             result = cur.fetchall()
             return result
         else:
