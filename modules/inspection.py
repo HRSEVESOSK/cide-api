@@ -426,9 +426,9 @@ class Inspection(Resource):
             return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json',status=401)
         else:
             return Response(result, mimetype='application/json')
-
-
-
+''' 
+REFACTORED CODE START
+'''
 class Coordinated(Inspection):
     @auth.login_required
     def get(self, hashid):
@@ -498,7 +498,6 @@ class Coordinated(Inspection):
 
 
 class Specific(Inspection):
-
     def _generate_specific_inspection_resp_data(self,specific_inspection_data):
         returnDataList = []
         # returnDataList.append({"count": self.connection.numresult})
@@ -526,6 +525,7 @@ class Specific(Inspection):
             returnData['crit_count'] = (row['countcrit'])
             returnDataList.append(returnData)
         return returnDataList
+
 
     @auth.login_required
     def get(self,hashid):
@@ -641,7 +641,55 @@ class SpecificTypes(Inspection):
     @auth.login_required
     def get(self):
         id_person_role = self.personclass.getPersonRoleId(g.user)
-        print("GET Specific INSPECTION FOR {}".format(id_person_role))
+        ## GET LIST OF SPEC INSP TYPES
+        inspection_type = request.args.get('type')
+        if inspection_type not in ['CI','SI']:
+            return Response(status=400)
+        language = request.args.get('lang')
+        if not language or language == 'en':
+            SQL = "SELECT des_inspection_type INSTYPE,id_inspection_type ID FROM cide_specific_inspection_type "
+        else:
+            SQL = "SELECT des_inspection_type_hrv INSTYPE,id_inspection_type ID FROM cide_specific_inspection_type "
+        if inspection_type:
+            SQL = SQL + "WHERE type='{}'".format(inspection_type)
+        else:
+            SQL = SQL + "WHERE 1=1"
+        self.connection.connect()
+        specific_inspection_types_data= self.connection.query(sql=SQL)
+        self.connection.close()
+        returnDataList = []
+        for row in specific_inspection_types_data:
+            returnData = {}
+            if 'ROLE_CIDE_ADMIN' in g.user[1]:
+                returnData['id'] = hashids.encode(row['id'])
+            returnData['code'] = (row['instype']).split('/')[0]
+            returnData['name'] = (row['instype']).split('/')[1]
+            ##APPEN INSPECTORS TO INSPECTION TYPES
+            SQL = "SELECT id_person FROM cide_person_role WHERE id_inspection_type = %s"
+            self.connection.connect()
+            inspectors = self.connection.query(sql=SQL,data=[row['id']])
+            self.connection.close()
+            inspectors_ids = tuple(int(l[0]) for l in inspectors)
+            if inspectors:
+                SQL = "SELECT concat(person_name,' ',person_surname) FULLNAME, " \
+                      "gs_username USERNAME, " \
+                      "organisation ORGANISATION, " \
+                      "id_person IDP " \
+                      "FROM cide_person WHERE id_person in %s"
+                self.connection.connect()
+                inspectors_data = self.connection.query(sql=SQL, data=[inspectors_ids])
+                self.connection.close()
+                inspectors = []
+                for person in inspectors_data:
+                    inspector = {}
+                    inspector['fullname'] = person[0]
+                    inspector['username'] = person[1]
+                    inspector['organisation'] = person[2]
+                    inspector['id'] = hashids.encode(person[3])
+                    inspectors.append(inspector)
+                returnData['inspectors'] = inspectors
+            returnDataList.append(returnData)
+        return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
 
 
 class Issue(Inspection):
