@@ -40,8 +40,8 @@ api.add_resource(inspection.Inspection, '/api/inspection',
                                         '/api/inspection/specific/report/upload',
                                         endpoint='cide_api_inspections', methods=['GET','POST'])
 api.add_resource(document.UploadDocument, '/api/document/upload', endpoint='cide_api_documents_upload', methods=['POST'])
-api.add_resource(document.DownloadDocument, '/api/document/download', endpoint='cide_api_documents_downloads', methods=['POST'])
-api.add_resource(document.DeleteDocument, '/api/documents/delete', endpoint='cide_api_documents_delete',methods=['DELETE'])
+api.add_resource(document.DownloadDocument, '/api/document/download', endpoint='cide_api_documents_downloads', methods=['GET'])
+api.add_resource(document.DeleteDocument, '/api/document/delete', endpoint='cide_api_documents_delete',methods=['DELETE'])
 api.add_resource(user.User, '/api/user','/api/user/update','/api/user/delete', endpoint='cide_api_users',methods=['GET','POST'])
 api.add_resource(public.Public,'/api/public/reset-password', endpoint='cide_api_public', methods=['GET'])
 
