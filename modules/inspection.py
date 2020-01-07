@@ -10,6 +10,7 @@ from config import config as cfg
 import lib.pgsql as pgsql
 auth = HTTPBasicAuth()
 hashids = Hashids(min_length=16)
+
 class Inspection(Resource):
     def __init__(self):
         self.connection =  pgsql.PGSql()
@@ -17,8 +18,6 @@ class Inspection(Resource):
         self.apiBaseUrl = 'http://' + cfg.host + ':' + cfg.apiport + '/api'
     @auth.verify_password
     def verify_pw(username, password):
-        print(username)
-        print(password)
         authenticate = authentication.Authentication()
         user = authenticate.verify_user_pass(username, password)
         print(user)
@@ -610,3 +609,92 @@ class Inspection(Resource):
             return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json',status=401)
         else:
             return Response(result, mimetype='application/json')
+
+
+
+class Coordinated(Inspection):
+
+    @auth.login_required
+    def get(self):
+        id_person_role = self.personclass.getPersonRoleId(g.user)
+        print("GET COORDINATED INSPECTION FOR {}".format(id_person_role))
+
+
+class Specific(Inspection):
+    @auth.login_required
+    def get(self):
+        id_person_role = self.personclass.getPersonRoleId(g.user)
+        print("GET Specific INSPECTION FOR {}".format(id_person_role))
+
+class SpecificTypes(Inspection):
+    @auth.login_required
+    def get(self):
+        id_person_role = self.personclass.getPersonRoleId(g.user)
+        print("GET Specific INSPECTION FOR {}".format(id_person_role))
+
+
+class Issue(Inspection):
+    @auth.login_required
+    def get(self):
+        id_person_role = self.personclass.getPersonRoleId(g.user)
+        print("GET Specific INSPECTION FOR {}".format(id_person_role))
+
+
+class Score(Inspection):
+    @auth.login_required
+    def get(self):
+        id_person_role = self.personclass.getPersonRoleId(g.user)
+        print("GET Specific INSPECTION FOR {}".format(id_person_role))
+
+
+class CriteriaScore(Inspection):
+    @auth.login_required
+    def get(self):
+        language = request.args.get('lang')
+        if not language or language == 'en':
+            SQL = ("SELECT id_score ID, CONCAT(des_score,'-(',score_num::text,')') LIST from cide_score")
+        else:
+            SQL = ("SELECT id_score ID, CONCAT(des_score_hrv,'-(',score_num::text,')') LIST from cide_score")
+        self.connection.connect()
+        score_data = self.connection.query(sql=SQL)
+        self.connection.close()
+        returnData = []
+        for value in score_data:
+            item = {}
+            item['id'] = hashids.encode(value['id'])
+            item['value'] = value['list']
+            returnData.append(item)
+        return Response(json.dumps(returnData, ensure_ascii=False), mimetype='application/json')
+
+
+class Criteria(Inspection):
+    @auth.login_required
+    def get(self):
+        language = request.args.get('lang')
+        if not language or language == 'en':
+            SQL1 = "SELECT id_criterior_family ID, criterior_family FVALUE FROM cide_criterior_family"
+            SQL2 = "SELECT id_criterior ID, des_criterior CVALUE FROM cide_criterior WHERE id_criterior_family = %s"
+        else:
+            SQL1 = ("SELECT id_criterior_family ID, criterior_family FVALUE FROM cide_criterior_family")
+            SQL2 = "SELECT id_criterior ID, des_criterior_hrv CVALUE FROM cide_criterior WHERE id_criterior_family = %s"
+        self.connection.connect()
+        criteria_family_data = self.connection.query(sql=SQL1)
+        self.connection.close()
+        returnDataList = []
+        for family in criteria_family_data:
+            families = {}
+            families['id'] = hashids.encode(family['id'])
+            families['value'] = family['fvalue']
+            self.connection.connect()
+            criteriors_data = self.connection.query(sql=SQL2,data=[family['id']])
+            self.connection.close()
+            if criteriors_data:
+                criteriums = []
+                for kriterium in criteriors_data:
+                    criterium = {}
+                    criterium['id'] = hashids.encode(kriterium['id'])
+                    criterium['value'] = kriterium['cvalue']
+                    criteriums.append(criterium)
+                families['criteria'] = criteriums
+            returnDataList.append(families)
+        return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
