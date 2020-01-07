@@ -204,126 +204,7 @@ class Inspection(Resource):
                 returnDataList.append(returnData)
             self.connection.close()
             return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
-        """
-            GET DATA FOR SPECIFIC INSPECTION /api/inspection/specific/id_coordinated_inspection
-            ROLES ADMIN + COORDINATOR RETRIEVES ALL FOR SELECTED COORDINATED INSPECTION
-            ROLES 
-        """
-        if hashid and request.path.endswith('/specific/' + hashid):
-            language = request.args.get('lang')
-            print('Endpoint to view specific inspection data')
-            '''
-            if 'ROLE_CIDE_ENV' in g.user[1] \
-                    or 'ROLE_CIDE_VOD' in g.user[1] \
-                    or 'ROLE_CIDE_EL' in g.user[1] \
-                    or 'ROLE_CIDE_ZP' in g.user[1] \
-                    or 'ROLE_CIDE_ICZ' in g.user[1] \
-                    or 'ROLE_CIDE_ZNR' in g.user[1] \
-                    or 'ROLE_CIDE_SAN' in g.user[1] \
-                    or 'ROLE_CIDE_PRI' in g.user[1] \
-                    or 'ROLE_CIDE_VET' in g.user[1] \
-                    or 'ROLE_CIDE_POLJ' in g.user[1] \
-                    or 'ROLE_CIDE_RUD' in g.user[1] \
-                    or 'ROLE_CIDE_OPT' in g.user[1] \
-                    or 'ROLE_CIDE_IGOK' in g.user[1]:
-            '''
-            if set(g.user[1]).issubset(cfg.siroles): 
-                idpersonrole = self.personclass.getPersonRoleId(g.user)
-                id_inspection_type_select = "select id_inspection_type from cide_person_role where id_person_role = %s" % idpersonrole[2][0][0]
-                self.connection.connect()
-                id_inspection_type = self.connection.query(id_inspection_type_select)
-                self.connection.close()
-                if not language or language == 'en':
-                    des_inspection_type = 'des_inspection_type'
-                else:
-                    des_inspection_type = 'des_inspection_type_hrv'
-                self.connection.connect()
-                specinspecdata = self.connection.query("SELECT a.id_specific_inspection ID, "
-                                                       "b.%s SPECTYPE, "
-                                                       "a.specific_inspection_date DATE, "
-                                                       "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
-                                                       "c.organisation ORGANISATION, "
-                                                       "a.final_report REPORT, "
-                                                       "a.last_update UPDATED "
-                                                       "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d "
-                                                       "WHERE a.id_coordinated_inspection = %s "
-                                                       "AND a.id_person_role in (select id_person_role from cide_person_role where id_inspection_type = %s ) "
-                                                       "AND d.id_person_role = a.id_person_role "
-                                                       "AND c.id_person = d.id_person "
-                                                       "AND b.id_inspection_type = d.id_inspection_type" % (des_inspection_type,(hashids.decode(hashid))[0],id_inspection_type[0][0]))
-                self.connection.close()
-                if not specinspecdata:
-                    return Response('{"message":"inspector %s has been asigned 0 specific inspections"}' % (hashids.encode(idpersonrole[0][0][0])),mimetype='application/json')
-                else:
-                    returnDataList = []
-                    #returnDataList.append({"count": self.connection.numresult})
-                    for row in specinspecdata:
-                        returnData = {}
-                        returnData['spec_inspection_type'] = (row['spectype'])
-                        returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
-                        returnData['spec_inspection_inspector'] = (row['inspector'])
-                        returnData['spec_inspection_organisation'] = (row['organisation'])
-                        if row['report'] is None:
-                            returnData['spec_inspection_report'] = (row['report'])
-                        else:
-                            returnData['spec_inspection_report'] = 1
-                        returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
-                        returnData['id'] = (hashids.encode(row['id']))
-                        returnDataList.append(returnData)
-                    self.connection.close()
-                    return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
-            elif 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
-                if not language or language == 'en':
-                    des_inspection_type = 'des_inspection_type'
-                else:
-                    des_inspection_type = 'des_inspection_type_hrv'
-                self.connection.connect()
-                print("ID COORD INSP: %s" % (hashids.decode(hashid))[0])
-                specinspecdata = self.connection.query("SELECT a.id_specific_inspection ID, "
-                                                       "b.%s SPECTYPE, "
-                                                       "a.specific_inspection_date DATE, "
-                                                       "concat(c.person_name,' ',c.person_surname) INSPECTOR, "
-                                                       "c.organisation ORGANISATION, "
-                                                       "a.final_report REPORT, "
-                                                       "a.last_update UPDATED, "
-                                                       "count(e.id_specific_inspection) COUNTCRIT, "
-                                                       "count(f.id_specific_inspection) COUNTISSUE "
-                                                       "FROM cide_specific_inspection a "
-                                                       "LEFT JOIN cide_person_role d on d.id_person_role = a.id_person_role "
-                                                       "LEFT JOIN cide_person c on c.id_person = d.id_person "
-                                                       "LEFT JOIN cide_specific_inspection_type b on b.id_inspection_type = d.id_inspection_type "
-                                                       "LEFT JOIN cide_specific_insp_criteria e on e.id_specific_inspection = a.id_specific_inspection "
-                                                       "LEFT JOIN cide_open_issue f on f.id_specific_inspection = a.id_specific_inspection "
-                                                       "WHERE a.id_coordinated_inspection = %s "
-                                                       "AND d.id_person_role = a.id_person_role "
-                                                       "AND c.id_person = d.id_person "
-                                                       "AND b.id_inspection_type = d.id_inspection_type "
-                                                       "GROUP BY ID, SPECTYPE, DATE, INSPECTOR, ORGANISATION, REPORT "
-                                                       "ORDER BY  max(a.last_update) DESC NULLS LAST" %
-                                                       (des_inspection_type,(hashids.decode(hashid))[0]))
-                self.connection.close()
-                if not specinspecdata:
-                    return Response('{"message":"coordinated inspection %s has 0 specific inspections"}' % hashid,mimetype='application/json')
-                else:
-                    returnDataList = []
-                    #returnDataList.append({"count": self.connection.numresult})
-                    for row in specinspecdata:
-                        returnData = {}
-                        returnData['spec_inspection_type'] = (row['spectype'])
-                        returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
-                        returnData['spec_inspection_inspector'] = (row['inspector'])
-                        returnData['spec_inspection_organisation'] = (row['organisation'])
-                        if row['report'] is None:
-                            returnData['spec_inspection_report'] = (row['report'])
-                        else:
-                            returnData['spec_inspection_report'] = 1
-                        returnData['id'] = (hashids.encode(row['id']))
-                        returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
-                        returnData['issues_count'] = (row['countissue'])
-                        returnData['crit_count'] = (row['countcrit'])
-                        returnDataList.append(returnData)
-                    self.connection.close()
-                    return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+
         """
             GET LIST OF ISSUES FOR SPECIFIC INSPECTION /api/inspection/specific/issue/id_coordinated_inspection
             ROLES ADMIN + COORDINATOR RETRIEVES ALL FOR SELECTED COORDINATED INSPECTION
@@ -374,70 +255,6 @@ class Inspection(Resource):
             print scores
             return Response(json.dumps(scores, ensure_ascii=False), mimetype='application/json')
 
-        """
-            GET LIST OF COORDINATED INSPECTION FOR ESTABLISHMENT ID/api/inspection/id_establishment
-                    ROLES ADMIN + COORDINATOR RETRIEVES ALL FOR SELECTED COORDINATED INSPECTION
-                    ROLES  
-                """
-        if hashid and request.path.endswith('/' + hashid):
-            if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
-                self.connection.connect()
-                coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID, "
-                                                                "a.inspection_date DATE, "
-                                                                "concat(b.person_name,' ',b.person_surname) COORDINATOR, "
-                                                                "count(c.id_specific_inspection) SICOUNT, "
-                                                                "a.type as CITYPE, "
-                                                                "a.final_report as REPORT "
-                                                        "FROM cide_coordinated_inspection a "
-                                                        "LEFT JOIN cide_person b "
-                                                        "ON a.id_user = b.id_person "
-                                                        "LEFT JOIN cide_specific_inspection c "
-                                                        "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
-                                                        "WHERE a.id_establishment = %s "
-                                                        "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname ORDER BY max(c.last_update) DESC NULLS LAST" %  (hashids.decode(hashid))[0])
-                self.connection.close()
-            else:
-                idpersonrole = self.personclass.getPersonRoleId(g.user)
-                id_inspection_type_select = "select id_inspection_type from cide_person_role where id_person_role = %s" % idpersonrole[2][0][0]
-                self.connection.connect()
-                id_inspection_type = self.connection.query(id_inspection_type_select)
-                self.connection.close()
-                self.connection.connect()
-                coordinspedata = self.connection.query("SELECT a.id_coordinated_inspection ID, "
-                                                       "a.inspection_date DATE, "
-                                                       "concat(b.person_name,' ',b.person_surname) COORDINATOR, "
-                                                       "count(c.id_specific_inspection) SICOUNT, "
-                                                       "a.type as CITYPE, "
-                                                       "a.final_report as REPORT "
-                                                       "FROM cide_coordinated_inspection a "
-                                                       "LEFT JOIN cide_person b "
-                                                       "ON a.id_user = b.id_person "
-                                                       "LEFT JOIN cide_specific_inspection c "
-                                                       "ON a.id_coordinated_inspection = c.id_coordinated_inspection "
-                                                       "WHERE a.id_establishment = %s "
-                                                       "AND c.id_person_role in (select id_person_role from cide_person_role where id_inspection_type = %s) "
-                                                       "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname ORDER BY max(c.last_update) DESC NULLS LAST" %
-                                                       ((hashids.decode(hashid))[0],id_inspection_type[0][0]))
-                self.connection.close()
-            if not coordinspedata:
-                return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid, mimetype='application/json')
-            else:
-                returnDataList = []
-                #returnDataList.append({"count": self.connection.numresult})
-                for row in coordinspedata:
-                    returnData = {}
-                    returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
-                    returnData['inspection_coordinator'] = (row['coordinator'])
-                    returnData['inspection_type'] = (row['citype'])
-                    if row['report'] is None:
-                        returnData['inspection_report'] = (row['report'])
-                    else:
-                        returnData['inspection_report'] = 1
-                    returnData['id'] = (hashids.encode(row['id']))
-                    returnData['si_count'] = (row['sicount'])
-                    returnDataList.append(returnData)
-                self.connection.close()
-                return Response(json.dumps(returnDataList,ensure_ascii=False), mimetype='application/json')
 
     @auth.login_required
     def post(self):
@@ -613,18 +430,212 @@ class Inspection(Resource):
 
 
 class Coordinated(Inspection):
-
     @auth.login_required
-    def get(self):
-        id_person_role = self.personclass.getPersonRoleId(g.user)
-        print("GET COORDINATED INSPECTION FOR {}".format(id_person_role))
+    def get(self, hashid):
+        if hashid:
+            if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
+                SQL = "SELECT " \
+                      "a.id_coordinated_inspection ID, " \
+                      "a.inspection_date DATE, " \
+                      "concat(b.person_name,' ',b.person_surname) COORDINATOR, " \
+                      "count(c.id_specific_inspection) SICOUNT, " \
+                      "a.type as CITYPE, " \
+                      "a.final_report as REPORT " \
+                      "FROM cide_coordinated_inspection a " \
+                      "LEFT JOIN cide_person b " \
+                      "ON a.id_user = b.id_person " \
+                      "LEFT JOIN cide_specific_inspection c " \
+                      "ON a.id_coordinated_inspection = c.id_coordinated_inspection " \
+                      "WHERE a.id_establishment = %s " \
+                      "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname " \
+                      "ORDER BY max(c.last_update) DESC NULLS LAST"
+                self.connection.connect()
+                coordinated_inspection_data = self.connection.query(sql=SQL, data=[(hashids.decode(hashid))[0]])
+                self.connection.close()
+            else:
+                id_person_role = self.personclass.getPersonRoleId(g.user)
+                SQL = "SELECT id_inspection_type FROM cide_person_role WHERE id_person_role = %s"
+                self.connection.connect()
+                id_inspection_type_data = self.connection.query(sql=SQL,data=[id_person_role[2][0][0]])
+                self.connection.close()
+                SQL="SELECT a.id_coordinated_inspection ID, " \
+                    "a.inspection_date DATE, " \
+                    "concat(b.person_name,' ',b.person_surname) COORDINATOR, " \
+                    "count(c.id_specific_inspection) SICOUNT, " \
+                    "a.type as CITYPE, " \
+                    "a.final_report as REPORT " \
+                    "FROM cide_coordinated_inspection a " \
+                    "LEFT JOIN cide_person b " \
+                    "ON a.id_user = b.id_person " \
+                    "LEFT JOIN cide_specific_inspection c " \
+                    "ON a.id_coordinated_inspection = c.id_coordinated_inspection " \
+                    "WHERE a.id_establishment = %s " \
+                    "AND c.id_person_role in (SELECT id_person_role FROM cide_person_role where id_inspection_type = %s) " \
+                    "GROUP BY a.id_coordinated_inspection, a.inspection_date, b.person_name, b.person_surname " \
+                    "ORDER BY max(c.last_update) DESC NULLS LAST"
+                self.connection.connect()
+                coordinated_inspection_data = self.connection.query(sql=SQL,data=((hashids.decode(hashid))[0], id_inspection_type_data[0][0]))
+                self.connection.close()
+            if not coordinated_inspection_data:
+                return Response('{"message":"establishment %s has 0 coordinated inspections"}' % hashid,mimetype='application/json')
+            else:
+                returnDataList = []
+                # returnDataList.append({"count": self.connection.numresult})
+                for row in coordinated_inspection_data:
+                    returnData = {}
+                    returnData['inspection_date'] = (row['date']).strftime('%Y-%m-%d')
+                    returnData['inspection_coordinator'] = (row['coordinator'])
+                    returnData['inspection_type'] = (row['citype'])
+                    if row['report'] is None:
+                        returnData['inspection_report'] = (row['report'])
+                    else:
+                        returnData['inspection_report'] = 1
+                    returnData['id'] = (hashids.encode(row['id']))
+                    returnData['si_count'] = (row['sicount'])
+                    returnDataList.append(returnData)
+                self.connection.close()
+                return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
 
 
 class Specific(Inspection):
+
+    def _generate_specific_inspection_resp_data(self,specific_inspection_data):
+        returnDataList = []
+        # returnDataList.append({"count": self.connection.numresult})
+        for row in specific_inspection_data:
+            returnData = {}
+            returnData['spec_inspection_type'] = (row['spectype'])
+            returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
+            returnData['spec_inspection_inspector'] = (row['inspector'])
+            returnData['spec_inspection_organisation'] = (row['organisation'])
+            if row['report'] is None:
+                returnData['spec_inspection_report'] = (row['report'])
+            else:
+                returnData['spec_inspection_report'] = 1
+            if row['sms_form'] is None:
+                returnData['spec_inspection_sms_form'] = (row['sms_form'])
+            else:
+                returnData['spec_inspection_sms_form'] = 1
+            if row['minutes'] is None:
+                returnData['spec_inspection_minutes'] = (row['minutes'])
+            else:
+                returnData['spec_inspection_minutes'] = 1
+            returnData['id'] = (hashids.encode(row['id']))
+            returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
+            returnData['issues_count'] = (row['countissue'])
+            returnData['crit_count'] = (row['countcrit'])
+            returnDataList.append(returnData)
+        return returnDataList
+
     @auth.login_required
-    def get(self):
-        id_person_role = self.personclass.getPersonRoleId(g.user)
-        print("GET Specific INSPECTION FOR {}".format(id_person_role))
+    def get(self,hashid):
+        language = request.args.get('lang')
+        if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]:
+            if not language or language == 'en':
+                SQL = "SELECT a.id_specific_inspection ID, " \
+                      "b.des_inspection_type SPECTYPE, " \
+                      "a.specific_inspection_date DATE, " \
+                      "concat(c.person_name,' ',c.person_surname) INSPECTOR, " \
+                      "c.organisation ORGANISATION, " \
+                      "a.final_report REPORT, " \
+                      "a.sms_form SMS_FORM, " \
+                      "a.minutes MINUTES, " \
+                      "a.last_update UPDATED, " \
+                      "count(e.id_specific_inspection) COUNTCRIT, " \
+                      "count(f.id_specific_inspection) COUNTISSUE " \
+                      "FROM cide_specific_inspection a " \
+                      "LEFT JOIN cide_person_role d on d.id_person_role = a.id_person_role " \
+                      "LEFT JOIN cide_person c on c.id_person = d.id_person " \
+                      "LEFT JOIN cide_specific_inspection_type b on b.id_inspection_type = d.id_inspection_type " \
+                      "LEFT JOIN cide_specific_insp_criteria e on e.id_specific_inspection = a.id_specific_inspection " \
+                      "LEFT JOIN cide_open_issue f on f.id_specific_inspection = a.id_specific_inspection " \
+                      "WHERE a.id_coordinated_inspection = %s " \
+                      "AND d.id_person_role = a.id_person_role " \
+                      "AND c.id_person = d.id_person " \
+                      "AND b.id_inspection_type = d.id_inspection_type " \
+                      "GROUP BY ID, SPECTYPE, DATE, INSPECTOR, ORGANISATION, REPORT " \
+                      "ORDER BY  max(a.last_update) DESC NULLS LAST"
+            else:
+                SQL = "SELECT a.id_specific_inspection ID, " \
+                      "b.des_inspection_type_hrv SPECTYPE, " \
+                      "a.specific_inspection_date DATE, " \
+                      "concat(c.person_name,' ',c.person_surname) INSPECTOR, " \
+                      "c.organisation ORGANISATION, " \
+                      "a.final_report REPORT, " \
+                      "a.sms_form SMS_FORM, " \
+                      "a.minutes MINUTES, " \
+                      "a.last_update UPDATED, " \
+                      "count(e.id_specific_inspection) COUNTCRIT, " \
+                      "count(f.id_specific_inspection) COUNTISSUE " \
+                      "FROM cide_specific_inspection a " \
+                      "LEFT JOIN cide_person_role d on d.id_person_role = a.id_person_role " \
+                      "LEFT JOIN cide_person c on c.id_person = d.id_person " \
+                      "LEFT JOIN cide_specific_inspection_type b on b.id_inspection_type = d.id_inspection_type " \
+                      "LEFT JOIN cide_specific_insp_criteria e on e.id_specific_inspection = a.id_specific_inspection " \
+                      "LEFT JOIN cide_open_issue f on f.id_specific_inspection = a.id_specific_inspection " \
+                      "WHERE a.id_coordinated_inspection = %s " \
+                      "AND d.id_person_role = a.id_person_role " \
+                      "AND c.id_person = d.id_person " \
+                      "AND b.id_inspection_type = d.id_inspection_type " \
+                      "GROUP BY ID, SPECTYPE, DATE, INSPECTOR, ORGANISATION, REPORT " \
+                      "ORDER BY  max(a.last_update) DESC NULLS LAST"
+            self.connection.connect()
+            specific_inspection_data = self.connection.query(sql=SQL, data=[(hashids.decode(hashid))[0]])
+            self.connection.close()
+            if not specific_inspection_data:
+                return Response('{"message":"coordinated inspection %s has 0 specific inspections"}' % hashid,mimetype='application/json')
+            else:
+                returnDataList = self._generate_specific_inspection_resp_data(specific_inspection_data)
+        #if set(g.user[1]).issubset(cfg.siroles):
+        else:
+            id_person_role = self.personclass.getPersonRoleId(g.user)
+            SQL = "SELECT id_inspection_type FROM cide_person_role WHERE id_person_role = %s"
+            self.connection.connect()
+            id_inspection_type = self.connection.query(sql=SQL,data=[id_person_role[2][0][0]])
+            self.connection.close()
+            if not language or language == 'en':
+                SQL = "SELECT a.id_specific_inspection ID, " \
+                      "b.des_inspection_type SPECTYPE, " \
+                      "a.specific_inspection_date DATE, " \
+                      "concat(c.person_name,' ',c.person_surname) INSPECTOR, " \
+                      "c.organisation ORGANISATION, " \
+                      "a.final_report REPORT, " \
+                      "a.sms_form SMS_FORM, " \
+                      "a.minutes MINUTES, " \
+                      "a.last_update UPDATED " \
+                      "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d " \
+                      "WHERE a.id_coordinated_inspection = %s " \
+                      "AND a.id_person_role in (select id_person_role from cide_person_role where id_inspection_type = %s ) " \
+                      "AND d.id_person_role = a.id_person_role " \
+                      "AND c.id_person = d.id_person " \
+                      "AND b.id_inspection_type = d.id_inspection_type " \
+                      "ORDER BY max(a.last_update) DESC NULLS LAST"
+            else:
+                SQL = "SELECT a.id_specific_inspection ID, " \
+                      "b.des_inspection_type_hrv SPECTYPE, " \
+                      "a.specific_inspection_date DATE, " \
+                      "concat(c.person_name,' ',c.person_surname) INSPECTOR, " \
+                      "c.organisation ORGANISATION, " \
+                      "a.final_report REPORT, " \
+                      "a.sms_form SMS_FORM, " \
+                      "a.minutes MINUTES, " \
+                      "a.last_update UPDATED " \
+                      "FROM cide_specific_inspection a, cide_specific_inspection_type b, cide_person c, cide_person_role d " \
+                      "WHERE a.id_coordinated_inspection = %s " \
+                      "AND a.id_person_role in (select id_person_role from cide_person_role where id_inspection_type = %s ) " \
+                      "AND d.id_person_role = a.id_person_role " \
+                      "AND c.id_person = d.id_person " \
+                      "AND b.id_inspection_type = d.id_inspection_type " \
+                      "ORDER BY  max(a.last_update) DESC NULLS LAST"
+            self.connection.connect()
+            specific_inspection_data = self.connection.query(sql=SQL,data=((hashids.decode(hashid))[0],id_inspection_type[0][0]))
+            self.connection.close()
+            if not specific_inspection_data:
+                return Response('{"message":"inspector %s has been asigned 0 specific inspections"}' % (hashids.encode(id_person_role[0][0][0])), mimetype='application/json')
+            else:
+                returnDataList = self._generate_specific_inspection_resp_data(specific_inspection_data)
+        return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+
 
 class SpecificTypes(Inspection):
     @auth.login_required
