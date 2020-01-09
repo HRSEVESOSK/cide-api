@@ -22,16 +22,12 @@ api.add_resource(capabilities.Capabilities, '/api', endpoint='cide_api_capabilit
 api.add_resource(auth.Authentication, '/login', '/logout', endpoint='cide_api_authentication',methods=['GET'])
 api.add_resource(establishment.Establishment, '/api/establishment', endpoint='cide_api_establishments', methods=['GET'])
 api.add_resource(inspection.Coordinated, '/api/coordinated','/api/coordinated/<hashid>',endpoint='cide_api_coordinated_inspections', methods=['GET','POST','DELETE','PUT'])
-api.add_resource(inspection.Specific, '/api/specific/<hashid>',endpoint='cide_api_specific_inspections', methods=['GET','POST'])
+api.add_resource(inspection.Specific, '/api/specific/<hashid>',endpoint='cide_api_specific_inspections', methods=['GET','DELETE'])
 api.add_resource(inspection.SpecificTypes, '/api/specific/type',endpoint='cide_api_specific_inspections_types', methods=['GET'])
-api.add_resource(inspection.Issue,'/api/issue/<hashid>', endpoint='cide_api_issues', methods=['GET','POST'])
+api.add_resource(inspection.Issue,'/api/issue','/api/issue/<hashid>', endpoint='cide_api_issues', methods=['GET','POST'])
 api.add_resource(inspection.Score, '/api/score','/api/score/<hashid>', endpoint='cide_api_scores', methods=['GET','POST'])
 api.add_resource(inspection.CriteriaScore, '/api/criterior/score', endpoint='cide_api_criteria_score', methods=['GET'])
 api.add_resource(inspection.Criteria, '/api/criterior', endpoint='cide_api_criteria', methods=['GET'])
-
-api.add_resource(inspection.Inspection, '/api/inspection/specific/delete',
-                                        '/api/inspection/specific/issue/insert',
-                                        endpoint='cide_api_inspections', methods=['GET','POST'])
 api.add_resource(document.UploadDocument, '/api/document/upload', endpoint='cide_api_documents_upload', methods=['POST'])
 api.add_resource(document.DownloadDocument, '/api/document/download', endpoint='cide_api_documents_downloads', methods=['GET'])
 api.add_resource(document.DeleteDocument, '/api/document/delete', endpoint='cide_api_documents_delete',methods=['DELETE'])
