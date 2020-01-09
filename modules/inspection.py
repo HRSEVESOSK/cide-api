@@ -349,7 +349,6 @@ class Coordinated(Inspection):
             return Response(status=403)
 
 
-
 class Specific(Inspection):
     def _generate_specific_inspection_resp_data(self,specific_inspection_data):
         returnDataList = []
@@ -506,6 +505,7 @@ class Specific(Inspection):
             return_data = '{"deleted":0}'
         return Response(return_data, mimetype='application/json')
 
+
 class SpecificTypes(Inspection):
     @auth.login_required
     def get(self):
@@ -614,6 +614,56 @@ class Score(Inspection):
             returnData['last_update'] = (row[5]).strftime('%Y-%m-%d')
             scores.append(returnData)
         return Response(json.dumps(scores, ensure_ascii=False), mimetype='application/json')
+
+
+    @auth.login_required
+    def post(self):
+        id_person_role = self.personclass.getPersonRoleId(g.user)
+        payload_data = request.get_json()
+        last_updated = datetime.datetime.now().strftime('%Y-%m-%d')
+        inserted = 0
+        updated = 0
+        for criteria in payload_data:
+            if 'comments' not in criteria:
+                criteria['comments'] = ''
+            SQL="SELECT id_specific_inspection FROM cide_specific_insp_criteria WHERE id_specific_inspection=%s AND id_criterior=%s"
+            self.connection.connect()
+            id_specific_inspection = self.connection.query(sql=SQL,data=(hashids.decode(criteria['id_specific_inspection'])[0],hashids.decode(criteria['id_criterior'])[0]))
+            self.connection.close()
+            if not id_specific_inspection:
+                SQL="INSERT INTO cide_specific_insp_criteria (id_specific_inspection, id_criterior, id_score, comments, id_user, last_update) " \
+                    "VALUES (%s, %s, %s, %s, %s, %s) " \
+                    "RETURNING id_specific_inspection"
+                self.connection.connect()
+                insert_criterium_si_data = self.connection.query(sql=SQL,data=(hashids.decode(criteria['id_specific_inspection'])[0],
+                                                                               hashids.decode(criteria['id_criterior'])[0],
+                                                                               hashids.decode(criteria['id_score'])[0], (criteria['comments']).encode("utf-8"),
+                                                                               id_person_role[0][0][0], last_updated), fetch=False)
+                self.connection.close()
+                if insert_criterium_si_data:
+                    inserted += 1
+            else:
+                SQL="UPDATE cide_specific_insp_criteria " \
+                    "SET id_score=%s, comments=%s, id_user=%s, last_update = %s " \
+                    "WHERE id_specific_inspection=%s AND id_criterior=%s " \
+                    "RETURNING id_specific_inspection"
+                self.connection.connect()
+                update_criterium_si_data = self.connection.query(sql=SQL,data=(hashids.decode(criteria['id_score'])[0],
+                                                                               (criteria['comments']).encode("utf-8"),
+                                                                               id_person_role[0][0][0],last_updated,
+                                                                               id_specific_inspection[0][0],
+                                                                               hashids.decode(criteria['id_criterior'])[0]),fetch=False)
+                self.connection.close()
+                if update_criterium_si_data:
+                    updated = updated + 1
+
+        if inserted > 0 or updated > 0:
+            SQL="UPDATE cide_specific_inspection SET last_update='%s' WHERE id_specific_inspection=%s RETURNING id_specific_inspection"
+            self.connection.connect()
+            self.connection.query(sql=SQL,data=(last_updated, hashids.decode(criteria['id_specific_inspection'])[0]), fetch=False)
+            self.connection.close()
+        return_data = '{"inserted":' + str(inserted) + ',"updated":' + str(updated) + '}'
+        return Response(return_data,mimetype='application/json')
 
 
 class CriteriaScore(Inspection):
