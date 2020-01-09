@@ -325,13 +325,10 @@ class Coordinated(Inspection):
             id_person_role = self.personclass.getPersonRoleId(g.user)
             payload_data = request.get_json()
             last_updated = datetime.datetime.now().strftime('%Y-%m-%d')
-            coordinator = payload_data['inspection_coordinator']
             id_person_role_inspector = (hashids.decode(payload_data['inspector_id_person_role']))[0]
             hashid = payload_data['id']
             specific_inspection_date = payload_data['inspection_date']
             id_user = str(id_person_role[0][0][0])
-            print(payload_data)
-            1/0
             SQL="INSERT INTO cide_specific_inspection(id_coordinated_inspection,id_person_role,specific_inspection_date,id_user,last_update) VALUES (%s,%s,%s,%s,%s) RETURNING id_specific_inspection"
             self.connection.connect()
             insert_specific_inspection_data = self.connection.query(sql=SQL,data=((hashids.decode(hashid))[0], id_person_role_inspector, specific_inspection_date, id_user, last_updated), fetch=False)
@@ -377,8 +374,8 @@ class Specific(Inspection):
                 returnData['spec_inspection_minutes'] = 1
             returnData['id'] = (hashids.encode(row['id']))
             returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
-            returnData['issues_count'] = (row['countissue'])
-            returnData['crit_count'] = (row['countcrit'])
+            #returnData['issues_count'] = (row['countissue'])
+            #returnData['crit_count'] = (row['countcrit'])
             returnDataList.append(returnData)
         return returnDataList
 
@@ -466,6 +463,7 @@ class Specific(Inspection):
                       "AND d.id_person_role = a.id_person_role " \
                       "AND c.id_person = d.id_person " \
                       "AND b.id_inspection_type = d.id_inspection_type " \
+                      "GROUP BY ID, SPECTYPE, DATE, INSPECTOR, ORGANISATION, REPORT " \
                       "ORDER BY max(a.last_update) DESC NULLS LAST"
             else:
                 SQL = "SELECT a.id_specific_inspection ID, " \
@@ -483,6 +481,7 @@ class Specific(Inspection):
                       "AND d.id_person_role = a.id_person_role " \
                       "AND c.id_person = d.id_person " \
                       "AND b.id_inspection_type = d.id_inspection_type " \
+                      "GROUP BY ID, SPECTYPE, DATE, INSPECTOR, ORGANISATION, REPORT " \
                       "ORDER BY  max(a.last_update) DESC NULLS LAST"
             self.connection.connect()
             specific_inspection_data = self.connection.query(sql=SQL,data=(coordinated_inspection_oid,id_inspection_type[0][0]))
@@ -541,11 +540,14 @@ class SpecificTypes(Inspection):
             self.connection.close()
             inspectors_ids = tuple(int(l[0]) for l in inspectors)
             if inspectors:
-                SQL = "SELECT concat(person_name,' ',person_surname) FULLNAME, " \
-                      "gs_username USERNAME, " \
-                      "organisation ORGANISATION, " \
-                      "id_person IDP " \
-                      "FROM cide_person WHERE id_person in %s"
+                SQL = "SELECT concat(a.person_name,' ',a.person_surname) FULLNAME, " \
+                      "a.gs_username USERNAME, " \
+                      "a.organisation ORGANISATION, " \
+                      "a.id_person IDP, " \
+                      "b.id_person_role IDR " \
+                      "FROM cide_person a " \
+                      "LEFT JOIN cide_person_role b ON a.id_person=b.id_person " \
+                      "WHERE a.id_person in %s"
                 self.connection.connect()
                 inspectors_data = self.connection.query(sql=SQL, data=[inspectors_ids])
                 self.connection.close()
@@ -555,7 +557,8 @@ class SpecificTypes(Inspection):
                     inspector['fullname'] = person[0]
                     inspector['username'] = person[1]
                     inspector['organisation'] = person[2]
-                    inspector['id'] = hashids.encode(person[3])
+                    inspector['id'] = hashids.encode(person[4])
+                    #inspector['idr'] = hashids.encode(person[4])
                     inspectors.append(inspector)
                 returnData['inspectors'] = inspectors
             returnDataList.append(returnData)
