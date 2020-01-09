@@ -31,179 +31,6 @@ class Inspection(Resource):
         return True
 
 
-    @auth.login_required
-    def post(self):
-        specInspTypes = []
-        result = False
-        self.connection.connect()
-        for type in self.connection.query("SELECT split_part(des_inspection_type, '/', 1) from cide_specific_inspection_type"):
-            specInspTypes.append(type[0])
-        self.connection.close()
-        idpersonrole = self.personclass.getPersonRoleId(g.user)
-        requestData = request.get_json()
-        lastupdate = datetime.datetime.now().strftime('%Y-%m-%d')
-        ## INSERT COORDINATED INSPECTION
-        if 'ROLE_CIDE_ADMIN' in g.user[1] or 'ROLE_CIDE_COORDINATOR' in g.user[1]: # or 'ROLE_CIDE_SMS' in g.user[1]:
-            if request.path.endswith('/inspection/insert'):
-                idestablishment = requestData['id']
-                inspection_date = requestData['inspection_date']
-                inspection_type = requestData['inspection_type']
-                self.connection.connect()
-                insertcoordinatedinspection = self.connection.query("INSERT INTO cide_coordinated_inspection(id_person_role,id_establishment,inspection_date,id_user,last_update,type) VALUES "
-                                                                    "(%s,%s,'%s','%s','%s','%s') RETURNING id_coordinated_inspection" %
-                                                                    (idpersonrole[2][0][0],(hashids.decode(idestablishment))[0],inspection_date,idpersonrole[0][0][0],lastupdate,inspection_type),False)
-                self.connection.close()
-                result = '{"inserted":"'+hashids.encode(insertcoordinatedinspection[0][0])+'"}'
-            elif request.path.endswith('/specific/delete'):
-                hashid = requestData['id']
-                self.connection.connect()
-                deletespecificinspection = self.connection.query("DELETE FROM cide_specific_inspection WHERE id_specific_inspection = %s RETURNING id_specific_inspection" % (hashids.decode(hashid)[0]), False)
-                self.connection.close()
-
-                if deletespecificinspection:
-                    result = '{"deleted":"' + hashids.encode(deletespecificinspection[0][0]) + '"}'
-                else:
-                    result = '{"deleted":0}'
-            elif request.path.endswith('/delete'):
-                hashid = requestData['id']
-                self.connection.connect()
-                deletespecificinspection = self.connection.query("DELETE FROM cide_coordinated_inspection WHERE id_coordinated_inspection = %s RETURNING id_coordinated_inspection" % (hashids.decode(hashid)[0]),False)
-                self.connection.close()
-                if deletespecificinspection:
-                    result = '{"deleted":"'+hashids.encode(deletespecificinspection[0][0])+'"}'
-                else:
-                    result = '{"deleted":0}'
-            elif request.path.endswith('/update'):
-                coordinator = requestData['inspection_coordinator']
-                idpersonroleinspector = (hashids.decode(requestData['inspector_id_person_role']))[0]
-                hashid = requestData['id']
-                specinspdate = requestData['inspection_date']
-                iduser = str(idpersonrole[0][0][0])
-                print("**** INSERTING RECORD to SI table")
-                self.connection.connect()
-                insertspecificinspection = self.connection.query("INSERT INTO cide_specific_inspection(id_coordinated_inspection,id_person_role,specific_inspection_date,id_user,last_update) VALUES "
-                                                                 "(%s,%s,'%s','%s','%s') RETURNING id_specific_inspection" % ((hashids.decode(hashid))[0],idpersonroleinspector,specinspdate,iduser,lastupdate), False)
-                self.connection.close()
-                print("**** UPDATING record for coordinated inspecton to SI table")
-                if insertspecificinspection:
-                    #UPDATE METADATA FOR COORDINATED INSPECTION ADDING SPECIFIC INSPECTIONS
-                    self.connection.connect()
-                    updatecoordinspection = self.connection.query("UPDATE cide_coordinated_inspection SET last_update = '%s', id_user = '%s' WHERE id_coordinated_inspection = %s" % (lastupdate,iduser,(hashids.decode(hashid))[0]), False)
-                    self.connection.close()
-                    if updatecoordinspection:
-                        result = '{"inserted":"'+hashids.encode(insertspecificinspection[0][0])+'"}'
-        elif any(ext in g.user[1][0] for ext in specInspTypes):
-            #### INSERT OR UDPATE CITERIA SCORING #####
-            if request.path.endswith("/specific/criterior/insert"):
-                inserted = 0
-                updated = 0
-                for criteria in requestData:
-                    if 'comments' not in criteria:
-                        criteria['comments'] = ''
-                    self.connection.connect()
-                    #CHECK IF DB
-                    id_specific_inspection = self.connection.query("SELECT id_specific_inspection FROM "
-                                                                   "cide_specific_insp_criteria WHERE "
-                                                                   "id_specific_inspection=%s AND "
-                                                                   "id_criterior=%s"
-                                                                   % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0]))
-                    if not id_specific_inspection:
-                        #INSERTING
-                        print("Inserting score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],(criteria['comments']).encode("utf-8"),hashids.decode(criteria['id_specific_inspection'])[0]))
-                        insertCriteriumForSi = self.connection.query("INSERT INTO cide_specific_insp_criteria (id_specific_inspection, id_criterior, id_score, comments, id_user, last_update) VALUES "
-                                                                                "(%s, %s, %s, '%s', %s, '%s') RETURNING id_specific_inspection" % (hashids.decode(criteria['id_specific_inspection'])[0], hashids.decode(criteria['id_criterior'])[0],
-                                                                                                                 hashids.decode(criteria['id_score'])[0], (criteria['comments']).encode("utf-8"),idpersonrole[0][0][0],lastupdate), False)
-
-                        if insertCriteriumForSi:
-                            inserted = inserted + 1
-                    else:
-                        print("Updating score '%s' of criteria '%s' and comment '%s' for SI '%s'" % (hashids.decode(criteria['id_score'])[0], hashids.decode(criteria['id_criterior'])[0],(criteria['comments']).encode("utf-8"),id_specific_inspection[0][0]))
-                        updateCriteriumForCi = self.connection.query("UPDATE cide_specific_insp_criteria SET"
-                                                                     "  id_score=%s, comments='%s', id_user=%s, last_update = '%s' "
-                                                                     "WHERE id_specific_inspection=%s AND id_criterior=%s RETURNING id_specific_inspection" % (hashids.decode(criteria['id_score'])[0],(criteria['comments']).encode("utf-8"),idpersonrole[0][0][0],
-                                                                                                                              lastupdate,id_specific_inspection[0][0],hashids.decode(criteria['id_criterior'])[0]), False)
-                        if updateCriteriumForCi:
-                            updated = updated + 1
-                    self.connection.close()
-                if inserted > 0 or updated > 0:
-                    self.connection.connect()
-                    updateSIUpdateDate=self.connection.query("UPDATE cide_specific_inspection SET last_update='%s' WHERE id_specific_inspection=%s RETURNING id_specific_inspection" % (lastupdate,hashids.decode(criteria['id_specific_inspection'])[0]), False)
-                    if updateSIUpdateDate:
-                        print("SPecific inspection id '%s' sucessfully updated." % updateSIUpdateDate[0][0])
-                result = '{"inserted":'+str(inserted)+',"updated":'+str(updated)+'}'
-            #### INSERT ISSUES ####
-            if request.path.endswith("/specific/issue/insert"):
-                inserted = 0
-                updated = 0
-                deleted = 0
-                currentIssues = []
-                for issue in requestData:
-                    if 'issue_description' not in issue:
-                        issue['issue_description'] = ''
-                    if 'acc_warning' not in issue:
-                        issue['acc_warning'] = ''
-                    if 'des_indictment' not in issue:
-                        issue['des_indictment'] = ''
-                    if 'acc_prescriptions' not in issue:
-                        issue['acc_prescriptions'] = ''
-                    if "id" in issue:
-                        currentIssues.append(hashids.decode(issue['id'])[0])
-                        #UPDATING ISSUE
-                        self.connection.connect()
-                        updateIssue = self.connection.query("UPDATE cide_open_issue SET "
-                                                            "id_specific_inspection=%s, des_open_issue='%s', acc_prescriptions=%s, deadline_warning='%s', acc_warning=%s, des_indictment='%s', id_user=%s, last_update='%s' "
-                                                            "WHERE id_open_issue=%s RETURNING id_open_issue" % (hashids.decode(issue['id_specific_inspection'])[0],
-                                                                                                                (issue['issue_description']).encode("utf-8"),
-                                                                                                                issue['acc_prescriptions'],
-                                                                                                                issue['deadline_warning'],
-                                                                                                                issue['acc_warning'],
-                                                                                                                (issue['des_indictment']).encode("utf-8"),
-                                                                                                                idpersonrole[0][0][0],
-                                                                                                                lastupdate,
-                                                                                                                hashids.decode(issue['id'])[0]), False)
-                        self.connection.close()
-                        if updateIssue:
-                            updated = updated + 1
-                    else:
-                        self.connection.connect()
-                        insertIssue = self.connection.query("INSERT INTO cide_open_issue (id_specific_inspection, des_open_issue, acc_prescriptions, deadline_warning, acc_warning, des_indictment, id_user, last_update) VALUES "
-                                                                                 "(%s,'%s',%s,'%s',%s,'%s',%s,'%s') RETURNING id_open_issue" %
-                                                            (hashids.decode(issue['id_specific_inspection'])[0],
-                                                            (issue['issue_description']).encode("utf-8"),
-                                                            issue['acc_prescriptions'],
-                                                            issue['deadline_warning'],
-                                                            issue['acc_warning'],
-                                                            (issue['des_indictment']).encode("utf-8"),
-                                                            idpersonrole[0][0][0],
-                                                            lastupdate.encode("utf-8")),
-                                                            False)
-                        self.connection.close()
-                        if insertIssue:
-                            currentIssues.append(insertIssue[0][0])
-                            inserted = inserted + 1
-                ## CHECK DELETED
-                self.connection.connect()
-                ### CHECK DELETED ISSUES
-                issuesForCI = self.connection.query("SELECT id_open_issue FROM cide_open_issue WHERE "
-                                                    "id_specific_inspection=%s" % (hashids.decode(issue['id_specific_inspection'])[0]))
-                issuesForCIFlattened = [item for sublist in issuesForCI for item in sublist]
-                if len(issuesForCIFlattened) != len(currentIssues):
-                    toBedeleted = set(issuesForCIFlattened).difference(currentIssues)
-                    toBedeletedOids = list(toBedeleted)
-                    if len(toBedeletedOids) > 0:
-                        self.connection.connect()
-                        deleteIssues = self.connection.query("DELETE FROM cide_open_issue WHERE id_open_issue IN (%s) RETURNING id_open_issue" % (','.join(map(str,toBedeletedOids))),False)
-                        print("DELETED ISSUES: ", deleteIssues)
-                        if deleteIssues:
-                            deleted = deleted + len(deleteIssues)
-                result = '{"inserted":' + str(inserted) + ',"updated":' + str(updated) + ',"deleted":'+str(deleted)+'}'
-        if not result:
-            return Response('{"message":"your role %s has no right to add/update coordinated/specific inspections"}' % g.user[1][0], mimetype='application/json',status=401)
-        else:
-            return Response(result, mimetype='application/json')
-''' 
-REFACTORED CODE START
-'''
 class Coordinated(Inspection):
     @auth.login_required
     def get(self, hashid):
@@ -566,6 +393,31 @@ class SpecificTypes(Inspection):
 
 
 class Issue(Inspection):
+
+    def _check_removed_and_delete(self,specific_inspection_id,submitted_issues):
+        SQL = "SELECT id_open_issue FROM cide_open_issue WHERE id_specific_inspection=%s"
+        deleted = 0
+        self.connection.connect()
+        issues_specific_inspection = self.connection.query(sql=SQL,data=[specific_inspection_id])
+        self.connection.close()
+        if not issues_specific_inspection:
+            return deleted
+        issues_specific_inspection_flattened = [item for sublist in issues_specific_inspection for item in sublist]
+        if len(issues_specific_inspection_flattened) != len(submitted_issues):
+            issues_to_be_deleted = list(set(issues_specific_inspection_flattened).difference(submitted_issues))
+            if len(issues_to_be_deleted) > 0:
+                SQL = "DELETE FROM cide_open_issue WHERE id_open_issue IN (%s) RETURNING id_open_issue"
+                self.connection.connect()
+                delete_issues_data = self.connection.query(sql=SQL, data=[(','.join(map(str, issues_to_be_deleted)))],
+                                                           fetch=False)
+                self.connection.close()
+                if delete_issues_data:
+                    deleted = len(delete_issues_data)
+        else:
+            deleted = 0
+        return deleted
+
+
     @auth.login_required
     def get(self,hashid):
         id_person_role = self.personclass.getPersonRoleId(g.user)
@@ -590,6 +442,50 @@ class Issue(Inspection):
             returnDataList.append(returnData)
             self.connection.close()
         return Response(json.dumps(returnDataList, ensure_ascii=False), mimetype='application/json')
+
+    @auth.login_required
+    def post(self):
+        id_person_role = self.personclass.getPersonRoleId(g.user)
+        payload_data = request.get_json()
+        last_updated = datetime.datetime.now().strftime('%Y-%m-%d')
+        inserted = 0
+        updated = 0
+        deleted = 0
+        current_issues = []
+        for issue in payload_data:
+            des_open_issue=issue.get('issue_description')
+            acc_prescriptions=issue.get('acc_prescriptions')
+            deadline_warning=issue.get('deadline_warning')
+            acc_warning=issue.get('acc_warning')
+            des_indictment=issue.get('des_indictment')
+            id_specific_inspection=hashids.decode(issue.get('id_specific_inspection'))[0]
+            if "id" in issue:
+                current_issues.append(hashids.decode(issue['id'])[0])
+                SQL="UPDATE cide_open_issue " \
+                    "SET id_specific_inspection=%s, des_open_issue=%s, acc_prescriptions=%s, deadline_warning=%s, acc_warning=%s, des_indictment=%s, id_user=%s, last_update=%s " \
+                    "WHERE id_open_issue=%s " \
+                    "RETURNING id_open_issue"
+                self.connection.connect()
+                update_issue_data = self.connection.query(sql=SQL, data=(id_specific_inspection,des_open_issue.encode("utf-8"),acc_prescriptions,deadline_warning,acc_warning,des_indictment,
+                                                                         id_person_role[0][0][0],last_updated,
+                                                                         hashids.decode(issue['id'])[0]), fetch=False)
+                self.connection.close()
+                if update_issue_data:
+                    updated += 1
+            else:
+                SQL="INSERT INTO cide_open_issue (id_specific_inspection, des_open_issue, acc_prescriptions, deadline_warning, acc_warning, des_indictment, id_user, last_update) " \
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) " \
+                    "RETURNING id_open_issue"
+                self.connection.connect()
+                insert_issue_data = self.connection.query(sql=SQL,data=(id_specific_inspection,des_open_issue.encode("utf-8"),acc_prescriptions,deadline_warning,acc_warning,des_indictment,
+                                                                         id_person_role[0][0][0],last_updated), fetch=False)
+                self.connection.close()
+                if insert_issue_data:
+                    current_issues.append(insert_issue_data[0][0])
+                    inserted += 1
+        deleted = self._check_removed_and_delete(specific_inspection_id=id_specific_inspection,submitted_issues=current_issues)
+        return_data = '{"inserted":' + str(inserted) + ',"updated":' + str(updated) + ',"deleted":' + str(deleted) + '}'
+        return Response(return_data, mimetype='application/json')
 
 
 class Score(Inspection):
