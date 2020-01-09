@@ -25,13 +25,11 @@ api.add_resource(inspection.Coordinated, '/api/coordinated','/api/coordinated/<h
 api.add_resource(inspection.Specific, '/api/specific/<hashid>',endpoint='cide_api_specific_inspections', methods=['GET','POST'])
 api.add_resource(inspection.SpecificTypes, '/api/specific/type',endpoint='cide_api_specific_inspections_types', methods=['GET'])
 api.add_resource(inspection.Issue,'/api/issue/<hashid>', endpoint='cide_api_issues', methods=['GET','POST'])
-api.add_resource(inspection.Score, '/api/score/<hashid>', endpoint='cide_api_scores', methods=['GET'])
+api.add_resource(inspection.Score, '/api/score','/api/score/<hashid>', endpoint='cide_api_scores', methods=['GET','POST'])
 api.add_resource(inspection.CriteriaScore, '/api/criterior/score', endpoint='cide_api_criteria_score', methods=['GET'])
 api.add_resource(inspection.Criteria, '/api/criterior', endpoint='cide_api_criteria', methods=['GET'])
 
 api.add_resource(inspection.Inspection, '/api/inspection/specific/delete',
-                                        '/api/inspection/specific/type/insert',
-                                        '/api/inspection/specific/criterior/insert',
                                         '/api/inspection/specific/issue/insert',
                                         endpoint='cide_api_inspections', methods=['GET','POST'])
 api.add_resource(document.UploadDocument, '/api/document/upload', endpoint='cide_api_documents_upload', methods=['POST'])
