@@ -20,14 +20,12 @@ class Inspection(Resource):
     def verify_pw(username, password):
         authenticate = authentication.Authentication()
         user = authenticate.verify_user_pass(username, password)
-        print(user)
         if not user:
             return False
         g.user = user
         # CHECK IF USER AND ROLES EXIST IN cide_person and cide_role tables, if not create one if yes return OK
         personClass =Person.Person()
         person = personClass.checkLoggedUser(user)
-        print("CHECK LOGGED USER STATUS: %s" % person)
         return True
 
 
@@ -178,32 +176,29 @@ class Coordinated(Inspection):
 
 class Specific(Inspection):
     def _generate_specific_inspection_resp_data(self,specific_inspection_data):
-        returnDataList = []
+        return_data = []
         # returnDataList.append({"count": self.connection.numresult})
-        for row in specific_inspection_data:
-            returnData = {}
-            returnData['spec_inspection_type'] = (row['spectype'])
-            returnData['spec_inspection_date'] = (row['date']).strftime('%Y-%m-%d')
-            returnData['spec_inspection_inspector'] = (row['inspector'])
-            returnData['spec_inspection_organisation'] = (row['organisation'])
-            if row['report'] is None:
-                returnData['spec_inspection_report'] = (row['report'])
-            else:
-                returnData['spec_inspection_report'] = 1
-            if row['sms_form'] is None:
-                returnData['spec_inspection_sms_form'] = (row['sms_form'])
-            else:
-                returnData['spec_inspection_sms_form'] = 1
-            if row['minutes'] is None:
-                returnData['spec_inspection_minutes'] = (row['minutes'])
-            else:
-                returnData['spec_inspection_minutes'] = 1
-            returnData['id'] = (hashids.encode(row['id']))
-            returnData['spec_inspection_updated'] = (row['updated']).strftime('%Y-%m-%d')
-            #returnData['issues_count'] = (row['countissue'])
-            #returnData['crit_count'] = (row['countcrit'])
-            returnDataList.append(returnData)
-        return returnDataList
+        for record in specific_inspection_data:
+            item = {}
+            item['spec_inspection_type'] = record.get('spectype')
+            item['spec_inspection_date'] = record.get('date').strftime('%Y-%m-%d')
+            item['spec_inspection_inspector'] = record.get('inspector')
+            item['spec_inspection_organisation'] = record.get('organisation')
+            item['spec_inspection_report'] = record.get('report')
+            if item['spec_inspection_report'] is not None:
+                item['spec_inspection_report'] = 1
+            item['spec_inspection_sms_form'] = record.get('sms_form')
+            if item['spec_inspection_sms_form'] is not None:
+                item['spec_inspection_sms_form'] = 1
+            item['spec_inspection_minutes'] = record.get('minutes')
+            if item['spec_inspection_minutes'] is not None:
+                item['spec_inspection_minutes'] = 1
+            item['id'] = (hashids.encode(record.get('id')))
+            item['spec_inspection_updated'] = record.get('updated').strftime('%Y-%m-%d')
+            item['issues_count'] = record.get('countissue')
+            item['crit_count'] = record.get('countcrit')
+            return_data.append(item)
+        return return_data
 
 
     @auth.login_required
