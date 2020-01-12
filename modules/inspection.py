@@ -319,7 +319,7 @@ class Specific(Inspection):
         specific_inspection_oid = (hashids.decode(hashid))[0]
         SQL = "DELETE FROM cide_specific_inspection WHERE id_specific_inspection = %s RETURNING id_specific_inspection"
         self.connection.connect()
-        delete_specific_inspection = self.connection.query(sql=SQL,data=[specific_inspection_oid])
+        delete_specific_inspection = self.connection.query(sql=SQL,data=[specific_inspection_oid],fetch=False)
         self.connection.close()
         if delete_specific_inspection:
             return_data = '{"deleted":"' + hashids.encode(delete_specific_inspection[0][0]) + '"}'
